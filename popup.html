@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Input List</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <h1>Advanced Reddit Filters</h1>
+    <!-- Logging Preferences -->
+    <div>
+      <label>
+        <input type="checkbox" id="loggingPreference" checked />
+        Print Logs?
+      </label>
+    </div>
+    <!-- Keywords -->
+    <div>
+      <h2>Keywords to Block</h2>
+      <textarea
+        class="inputList"
+        id="keywordList"
+        placeholder="Enter each keyword on a new line"
+      ></textarea>
+    </div>
+    <!-- Subreddits -->
+    <div>
+      <h2>Subreddits to Block</h2>
+      <textarea
+        class="inputList"
+        id="subredditList"
+        placeholder="Enter each subreddit on a new line"
+      ></textarea>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

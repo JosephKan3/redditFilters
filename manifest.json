@@ -1,18 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "Hide Hyperlink Clutter on Reddit",
+  "name": "Advanced Reddit Filters",
   "version": "1.0",
-  "description": "Automatically hides elements requiring login on old.reddit.com",
-  "permissions": [
-    "activeTab",
-    "*old.reddit.com/*"
-  ],
+  "description": "Filters posts by keyword and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit!",
+  "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {
-      "matches": ["*://old.reddit.com/*"],
+      "matches": ["*://*.reddit.com/*"],
       "js": ["content.js"]
     }
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png"
+    }
+  },
   "icons": {
     "48": "icon.png"
   }

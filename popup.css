@@ -1,0 +1,23 @@
+body {
+  padding: 10px;
+}
+
+.inputList {
+  width: 300px;
+  height: 300px;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+#submitButton {
+  margin-top: 10px;
+}
+.line {
+  display: block;
+  padding: 2px 5px;
+}
+.odd {
+  background-color: #f2f2f2;
+}
+.even {
+  background-color: #e6e6e6;
+}
