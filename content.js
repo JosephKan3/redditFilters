@@ -38,7 +38,10 @@ function banPosts(bans, keywords) {
       if (subreddit && title) {
         // Ban subreddits
         if (bans.includes(subreddit)) {
-          console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
+          if (loggingEnabled)
+            console.log(
+              `Hiding post based on subreddit: ${subreddit}: ${title}`
+            );
           post.style.display = "none";
           return;
         }
@@ -47,7 +50,8 @@ function banPosts(bans, keywords) {
         lowerTitle = title.toLowerCase();
         for (let banWord of keywords) {
           if (lowerTitle.includes(banWord)) {
-            console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
+            if (loggingEnabled)
+              console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
             post.style.display = "none";
             return;
           }
@@ -66,7 +70,8 @@ function banPosts(bans, keywords) {
       const title = post.getAttribute("post-title");
       // Ban subreddits
       if (bans.includes(subreddit)) {
-        console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
+        if (loggingEnabled)
+          console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
         post.style.display = "none";
         return;
       }
@@ -75,14 +80,46 @@ function banPosts(bans, keywords) {
       lowerTitle = title.toLowerCase();
       for (let banWord of keywords) {
         if (lowerTitle.includes(banWord)) {
-          console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
+          if (loggingEnabled)
+            console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
           post.style.display = "none";
           return;
         }
       }
-      console.log();
     });
   }
+}
+
+let subreddit_bans = [];
+let keyword_bans = [];
+let loggingEnabled = true;
+
+function getSavedOptions() {
+  chrome.storage.local.get(
+    ["hiddenKeywords", "hiddenSubreddits", "loggingEnabled"],
+    function (result) {
+      if (result.hiddenKeywords) {
+        for (keyword of result.hiddenKeywords) {
+          keyword_bans.push(keyword.toLowerCase());
+        }
+      }
+      if (result.hiddenSubreddits) {
+        for (subreddit of result.hiddenSubreddits) {
+          // Slices off r/ in case the user included it
+          let cleanedSubreddit = subreddit;
+          if (subreddit.length >= 2) {
+            if (subreddit.substring(0, 2) == "r/") {
+              cleanedSubreddit == subreddit.slice(2);
+            }
+          }
+          subreddit_bans.push(cleanedSubreddit.toLowerCase());
+        }
+      }
+      if (result.loggingEnabled !== undefined) {
+        loggingEnabled = result.loggingEnabled;
+      }
+    }
+  );
 }
 
 // Run the function when the DOM is fully loaded
@@ -90,6 +127,7 @@ function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
       if (mutation.addedNodes.length) {
+        getSavedOptions();
         banPosts(subreddit_bans, keyword_bans);
         showImages();
       }
@@ -101,35 +139,8 @@ function observeDOMChanges() {
   observer.observe(document.body, config);
 }
 
-let subreddit_bans = [];
-let keyword_bans = [];
-
-chrome.storage.local.get(
-  ["hiddenKeywords", "hiddenSubreddits"],
-  function (result) {
-    if (result.hiddenKeywords) {
-      console.log(result.hiddenKeywords);
-      for (keyword of result.hiddenKeywords) {
-        keyword_bans.push(keyword.toLowerCase());
-      }
-    }
-    if (result.hiddenSubreddits) {
-      console.log(result.hiddenSubreddits);
-      for (subreddit of result.hiddenSubreddits) {
-        // Slices off r/ in case the user included it
-        let cleanedSubreddit = subreddit;
-        if (subreddit.length >= 2) {
-          if (subreddit.substring(0, 2) == "r/") {
-            cleanedSubreddit == subreddit.slice(2);
-          }
-        }
-        subreddit_bans.push(cleanedSubreddit.toLowerCase());
-      }
-    }
-  }
-);
-
 // Start observing and hide existing elements
+getSavedOptions();
 showImages();
 banPosts(subreddit_bans, keyword_bans);
 observeDOMChanges();
