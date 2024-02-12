@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Hide Hyperlink Clutter on Reddit",
+  "version": "1.0",
+  "description": "Automatically hides elements requiring login on old.reddit.com",
+  "permissions": [
+    "activeTab",
+    "*old.reddit.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://old.reddit.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "48": "icon.png"
+  }
+}
