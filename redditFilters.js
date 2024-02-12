@@ -261,7 +261,7 @@ function handleNukeRequest(request, sender, sendResponse) {
       nukeAnimation();
       let usersToBan = [];
       if (oldReddit) {
-        const postsAndComments = document.querySelector(
+        const postsAndComments = document.querySelectorAll(
           ".thing:not(.morechildren,.deleted)"
         );
 
