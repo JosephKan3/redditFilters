@@ -254,48 +254,52 @@ function nukeAnimation() {
 
 function handleNukeRequest(request, sender, sendResponse) {
   if (request.action === "nukePage") {
-    console.log("Kablooie!");
-    nukeAnimation();
-    let usersToBan = [];
-    if (oldReddit) {
-      const postsAndComments = document.querySelectorAll(
-        ".thing:not(.morechildren,.deleted)"
-      );
-
-      // Fetches all authors in the thread and returns them
-      usersToBan = Array.from(postsAndComments).reduce(
-        (accumulatedBans, comment) => {
-          const author = comment.getAttribute("data-author");
-          // Only ban users that aren't already banned
-          if (author && !user_bans.includes(author)) {
-            accumulatedBans.push(author);
-          }
-          return accumulatedBans;
-        },
-        []
-      );
-      sendResponse(usersToBan);
-      // Handle new reddit design
+    if (!window.location.pathname.includes("/comments/")) {
+      sendResponse({ status: 400, message: "Can only nuke threads" }); // Ignore nuke request
     } else {
-      const postsAndComments = document.querySelectorAll(
-        "shreddit-post, shreddit-comment"
-      );
+      console.log("Kablooie!");
+      nukeAnimation();
+      let usersToBan = [];
+      if (oldReddit) {
+        const postsAndComments = document.querySelector(
+          ".thing:not(.morechildren,.deleted)"
+        );
 
-      // Fetches all authors in the thread and returns them
-      usersToBan = Array.from(postsAndComments).reduce(
-        (accumulatedBans, comment) => {
-          const author = comment.getAttribute("author");
-          // Only ban users that aren't already banned
-          if (author && !user_bans.includes(author)) {
-            accumulatedBans.push(author);
-          }
-          return accumulatedBans;
-        },
-        []
-      );
-      sendResponse(usersToBan);
+        // Fetches all authors in the thread and returns them
+        usersToBan = Array.from(postsAndComments).reduce(
+          (accumulatedBans, comment) => {
+            const author = comment.getAttribute("data-author");
+            // Only ban users that aren't already banned
+            if (author && !user_bans.includes(author)) {
+              accumulatedBans.push(author);
+            }
+            return accumulatedBans;
+          },
+          []
+        );
+        sendResponse({ status: 200, message: usersToBan });
+        // Handle new reddit design
+      } else {
+        const postsAndComments = document.querySelectorAll(
+          "shreddit-post, shreddit-comment"
+        );
+
+        // Fetches all authors in the thread and returns them
+        usersToBan = Array.from(postsAndComments).reduce(
+          (accumulatedBans, comment) => {
+            const author = comment.getAttribute("author");
+            // Only ban users that aren't already banned
+            if (author && !user_bans.includes(author)) {
+              accumulatedBans.push(author);
+            }
+            return accumulatedBans;
+          },
+          []
+        );
+        sendResponse({ status: 200, message: usersToBan });
+      }
+      banComments(usersToBan);
     }
-    banComments(usersToBan);
   }
 }
 
@@ -308,3 +312,5 @@ showImages();
 banComments(user_bans);
 banPosts(subreddit_bans, keyword_bans, user_bans);
 observeDOMChanges();
+
+// TODO: only enable nuke on thread

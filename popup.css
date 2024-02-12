@@ -70,7 +70,7 @@ h2 {
   animation: null 1s;
 }
 
-.nukeDescription {
+#nukeDescription {
   margin-top: 4rem;
   text-align: center;
   color: red;

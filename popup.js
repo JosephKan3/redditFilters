@@ -62,11 +62,19 @@ function nuke() {
     chrome.tabs.sendMessage(
       tabs[0].id,
       { action: "nukePage" },
-      function (response = []) {
+      function (response) {
+        if (response.status != 200) {
+          console.log(response.message);
+          document.getElementById("nukeDescription").innerHTML =
+            response.message;
+          return;
+        }
+
+        const foundUsers = response.message;
         // Adds all found users to the ban list
         const usersString = document.getElementById("userList").value;
         const usersArray = usersString.split("\n").map((item) => item.trim());
-        const combinedUsersArray = [...response, ...usersArray];
+        const combinedUsersArray = [...foundUsers, ...usersArray];
 
         // Save combined array
         chrome.storage.local.set({
