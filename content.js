@@ -100,7 +100,9 @@ function getSavedOptions() {
     function (result) {
       if (result.hiddenKeywords) {
         for (keyword of result.hiddenKeywords) {
-          keyword_bans.push(keyword.toLowerCase());
+          if (keyword.trim() != "") {
+            keyword_bans.push(keyword.toLowerCase());
+          }
         }
       }
       if (result.hiddenSubreddits) {

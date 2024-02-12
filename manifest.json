@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Advanced Reddit Filters",
   "version": "1.0",
-  "description": "Filters posts by keyword and subreddit from appearing. Poof!",
+  "description": "Filters posts by keyword and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit!",
   "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {
