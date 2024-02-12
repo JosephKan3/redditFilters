@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Advanced Reddit Filters",
+  "version": "1.0",
+  "description": "Filters posts by keyword and subreddit from appearing. Poof!",
+  "permissions": ["activeTab", "storage"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.reddit.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png"
+    }
+  },
+  "icons": {
+    "48": "icon.png"
+  }
+}
