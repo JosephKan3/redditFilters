@@ -2,6 +2,15 @@ body {
   padding: 10px;
   width: 310px;
   height: 600px;
+  background-color: yellow;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+h1 {
+  text-align: center;
 }
 
 h2 {
