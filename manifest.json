@@ -2,21 +2,28 @@
   "manifest_version": 3,
   "name": "Advanced Reddit Filters",
   "version": "1.0",
-  "description": "Filters posts by keyword and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit!",
+  "description": "Filters posts by keyword, user, and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit!",
   "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {
       "matches": ["*://*.reddit.com/*"],
-      "js": ["content.js"]
+      "js": ["redditFilters.js"]
     }
   ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icon.png"
+      "16": "assets/favicon_rocket/favicon-16x16.png"
     }
   },
   "icons": {
-    "48": "icon.png"
-  }
+    "32": "assets/favicon_rocket/favicon-16x16.png",
+    "512": "assets/favicon_rocket/android-chrome-512x512.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/explosion-boom.gif"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

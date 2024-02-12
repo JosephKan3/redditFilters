@@ -1,5 +1,12 @@
 body {
   padding: 10px;
+  width: 310px;
+  height: 600px;
+}
+
+h2 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .inputList {
@@ -8,16 +15,63 @@ body {
   white-space: pre-wrap;
   font-family: monospace;
 }
-#submitButton {
-  margin-top: 10px;
+
+.nukeSection {
+  display: flex;
+  flex-flow: column;
+  align-items: center;
 }
-.line {
-  display: block;
-  padding: 2px 5px;
+.nukeImage {
+  width: 4rem;
+  height: auto;
 }
-.odd {
-  background-color: #f2f2f2;
+
+.nukeTitle {
+  margin: 0;
 }
-.even {
-  background-color: #e6e6e6;
+.buttonWrapper {
+  position: relative;
+  top: -1rem;
+}
+
+[class*="nukeButton"] {
+  line-height: 90px;
+  font-size: 50px;
+  font-family: Raleway;
+  margin-top: 22px;
+  background-color: #ff0066;
+  border-radius: 40px;
+  padding: 0;
+  margin-left: -24px;
+  border-bottom: 12px solid #990033;
+  position: absolute;
+  width: 48px;
+  height: 34px;
+  transition: 0.5s;
+  text-align: center;
+}
+.nukeButton:active {
+  margin-top: 34px;
+  border-bottom: 0px solid black;
+  transition: 0.25s;
+}
+.nukeButton a {
+  text-decoration: none;
+  color: white;
+}
+.nukeButton1 {
+  background-color: Gainsboro;
+  width: 60px;
+  height: 40px;
+  border-bottom: 8px solid Grey;
+  z-index: -1;
+  margin-left: -30px;
+  margin-top: 30px;
+  animation: null 1s;
+}
+
+.nukeDescription {
+  margin-top: 4rem;
+  text-align: center;
+  color: red;
 }

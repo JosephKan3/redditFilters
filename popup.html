@@ -6,16 +6,32 @@
   </head>
   <body>
     <h1>Advanced Reddit Filters</h1>
-    <!-- Logging Preferences -->
+
+    <!-- Nuke -->
+    <div class="nukeSection">
+      <h3 class="nukeTitle">Nuke Current Thread?</h3>
+      <div class="buttonWrapper">
+        <div class="nukeButton">
+          <a style="color: #ff0066"></a>
+        </div>
+        <div class="nukeButton1"></div>
+      </div>
+      <p class="nukeDescription">
+        The author and all commentors will be added to your user block list.
+      </p>
+    </div>
+    <!-- Users -->
     <div>
-      <label>
-        <input type="checkbox" id="loggingPreference" checked />
-        Print Logs?
-      </label>
+      <h2>Blocked Users</h2>
+      <textarea
+        class="inputList"
+        id="userList"
+        placeholder="Enter each user on a new line"
+      ></textarea>
     </div>
     <!-- Keywords -->
     <div>
-      <h2>Keywords to Block</h2>
+      <h2>Blocked Keywords</h2>
       <textarea
         class="inputList"
         id="keywordList"
@@ -24,12 +40,19 @@
     </div>
     <!-- Subreddits -->
     <div>
-      <h2>Subreddits to Block</h2>
+      <h2>Blocked Subreddits</h2>
       <textarea
         class="inputList"
         id="subredditList"
         placeholder="Enter each subreddit on a new line"
       ></textarea>
+    </div>
+    <!-- Logging Preferences -->
+    <div>
+      <label>
+        <input type="checkbox" id="loggingPreference" checked />
+        Print Logs?
+      </label>
     </div>
     <script src="popup.js"></script>
   </body>
