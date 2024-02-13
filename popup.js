@@ -59,33 +59,34 @@ function loadData() {
 function nuke() {
   // Sends request to main content script for users to ban
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    chrome.tabs.sendMessage(
-      tabs[0].id,
-      { action: "nukePage" },
-      function (response) {
-        if (response.status != 200) {
-          console.log(response.message);
-          document.getElementById("nukeDescription").innerHTML =
-            response.message;
-          return;
+    try {
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { action: "nukePage" },
+        function (response) {
+          if (!response || response.status != 200) {
+            document.getElementById("nukeDescription").innerHTML =
+              "Can only nuke when window is on a reddit thread";
+            return;
+          }
+
+          const foundUsers = response.message;
+          // Adds all found users to the ban list
+          const usersString = document.getElementById("userList").value;
+          const usersArray = usersString.split("\n").map((item) => item.trim());
+          const combinedUsersArray = [...foundUsers, ...usersArray];
+
+          // Save combined array
+          chrome.storage.local.set({
+            hiddenUsers: combinedUsersArray,
+          });
+
+          // Print combined array to UI
+          document.getElementById("userList").value =
+            combinedUsersArray.join("\n");
         }
-
-        const foundUsers = response.message;
-        // Adds all found users to the ban list
-        const usersString = document.getElementById("userList").value;
-        const usersArray = usersString.split("\n").map((item) => item.trim());
-        const combinedUsersArray = [...foundUsers, ...usersArray];
-
-        // Save combined array
-        chrome.storage.local.set({
-          hiddenUsers: combinedUsersArray,
-        });
-
-        // Print combined array to UI
-        document.getElementById("userList").value =
-          combinedUsersArray.join("\n");
-      }
-    );
+      );
+    } catch (err) {}
   });
 }
 
