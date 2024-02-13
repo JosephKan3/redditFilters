@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Advanced Reddit Filters",
   "version": "1.0",
-  "description": "Filters posts by keyword, user, and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit!",
+  "description": "Filters posts by keyword, user, and subreddit from appearing. Poof! \n\n Works on both Reddit and Old Reddit! \n\n Includes The Nuke, which bans every user that posted on a given thread!",
   "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {

@@ -4,8 +4,10 @@ Advanced Reddit Filters is a Chrome extension that enhances your browsing experi
 
 ## Features
 
+- **User Blocking:** Hide posts and comments from specific users.
 - **Keyword Blocking:** Hide posts containing specific keywords you choose.
 - **Subreddit Blocking:** Hide posts from specific subreddits.
+- **Thread Nuke:** Automatically bans all users that posted or commented on the current thread being viewed
 - **Automatic Image Display:** Automatically display images linked in comments and posts for easier viewing.
 - **Logging Preference:** Option to enable or disable console logging for debugging or personal preference.
 
@@ -21,8 +23,10 @@ Advanced Reddit Filters is a Chrome extension that enhances your browsing experi
 
 After installation, click on the Reddit Filters icon in your Chrome toolbar to open the popup interface. Here, you can:
 
-- Enter keywords you wish to block, one per line, in the "Keywords to Block" textarea.
-- Enter subreddits you wish to block, one per line, without the "r/" prefix, in the "Subreddits to Block" textarea.
+- Press The Nuke button only if you wish to ban every single user _visible_ on a given thread. This is an unfortunate limitation due to the new Reddit API rate limits. Works much better on old reddit since it loads more users on screen. The Nuke will only work if a thread is open on screen.
+- Enter users you wish to block, one per line, without the "u/" prefix, in the "Blocked Users" textarea.
+- Enter keywords you wish to block, one per line, in the "Blocked Keywords" textarea.
+- Enter subreddits you wish to block, one per line, without the "r/" prefix, in the "Blocked Subreddits" textarea.
 - Check or uncheck the "Print Logs?" option according to your preference.
 
 Your settings will automatically save and apply to your current and future Reddit browsing sessions.
