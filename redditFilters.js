@@ -40,7 +40,7 @@ function banPosts(subreddits, keywords, users) {
       const author = post.getAttribute("data-author");
       if (subreddit && title) {
         // Ban subreddits
-        if (subreddits.includes(subreddit)) {
+        if (subreddits.has(subreddit)) {
           if (loggingEnabled)
             console.log(
               `Hiding post based on subreddit: ${subreddit}: ${title}`
@@ -61,7 +61,7 @@ function banPosts(subreddits, keywords, users) {
         }
 
         // Ban users
-        if (users.includes(author)) {
+        if (users.has(author)) {
           if (loggingEnabled)
             console.log(`Hiding post based on user: ${author}: ${title}`);
           post.style.display = "none";
@@ -81,7 +81,7 @@ function banPosts(subreddits, keywords, users) {
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
       // Ban subreddits
-      if (subreddits.includes(subreddit)) {
+      if (subreddits.has(subreddit)) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
         post.style.display = "none";
@@ -100,7 +100,7 @@ function banPosts(subreddits, keywords, users) {
       }
 
       // Ban users
-      if (users.includes(author)) {
+      if (users.has(author)) {
         if (loggingEnabled)
           console.log(`Hiding post based on user: ${author}: ${title}`);
         post.style.display = "none";
@@ -123,7 +123,7 @@ function banComments(users = []) {
 
     visibleComments.forEach((comment) => {
       const author = comment.getAttribute("data-author");
-      if (author && users.includes(author)) {
+      if (author && users.has(author)) {
         // Ban users
         if (loggingEnabled)
           console.log(`Hiding comment based on user: ${author}`);
@@ -140,7 +140,7 @@ function banComments(users = []) {
 
     visibleComments.forEach((comment) => {
       const author = comment.getAttribute("author");
-      if (author && users.includes(author)) {
+      if (author && users.has(author)) {
         // Ban users
         if (loggingEnabled)
           console.log(`Hiding comment based on user: ${author}`);
@@ -164,14 +164,14 @@ function getSavedOptions() {
               cleanedUser == user.slice(2);
             }
           }
-          user_bans.push(cleanedUser);
+          user_bans.add(cleanedUser);
         }
       }
 
       if (result.hiddenKeywords) {
         for (keyword of result.hiddenKeywords) {
           if (keyword.trim() != "") {
-            keyword_bans.push(keyword.toLowerCase());
+            keyword_bans.add(keyword.toLowerCase());
           }
         }
       }
@@ -185,7 +185,7 @@ function getSavedOptions() {
               cleanedSubreddit == subreddit.slice(2);
             }
           }
-          subreddit_bans.push(cleanedSubreddit.toLowerCase());
+          subreddit_bans.add(cleanedSubreddit.toLowerCase());
         }
       }
 
@@ -196,9 +196,9 @@ function getSavedOptions() {
   );
 }
 
-let user_bans = [];
-let subreddit_bans = [];
-let keyword_bans = [];
+let user_bans = new Set();
+let subreddit_bans = new Set();
+let keyword_bans = new Set();
 let loggingEnabled = true;
 
 // Run the function when the DOM is fully loaded
@@ -272,7 +272,7 @@ function handleNukeRequest(request, sender, sendResponse) {
           (accumulatedBans, comment) => {
             const author = comment.getAttribute("data-author");
             // Only ban users that aren't already banned
-            if (author && !user_bans.includes(author)) {
+            if (author && !user_bans.has(author)) {
               accumulatedBans.push(author);
             }
             return accumulatedBans;
@@ -291,16 +291,17 @@ function handleNukeRequest(request, sender, sendResponse) {
           (accumulatedBans, comment) => {
             const author = comment.getAttribute("author");
             // Only ban users that aren't already banned
-            if (author && !user_bans.includes(author)) {
+            if (author && !user_bans.has(author)) {
               accumulatedBans.push(author);
             }
             return accumulatedBans;
           },
           []
         );
+
         sendResponse({ status: 200, message: usersToBan });
       }
-      banComments(usersToBan);
+      banComments(new Set(usersToBan));
     }
   }
 }
