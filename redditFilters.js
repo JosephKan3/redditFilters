@@ -2,6 +2,7 @@
 const oldReddit = window.location.hostname === "old.reddit.com";
 
 function showImages() {
+  if (!expandImages) return;
   // Handle old reddit design
   if (oldReddit) {
     const links = document.querySelectorAll("a");
@@ -40,7 +41,7 @@ function banPosts(subreddits, keywords, users) {
       const author = post.getAttribute("data-author");
       if (subreddit && title) {
         // Ban subreddits
-        if (subreddits.has(subreddit)) {
+        if (blockSubreddits && subreddits.has(subreddit)) {
           if (loggingEnabled)
             console.log(
               `Hiding post based on subreddit: ${subreddit}: ${title}`
@@ -51,17 +52,21 @@ function banPosts(subreddits, keywords, users) {
 
         // Ban keywords
         lowerTitle = title.toLowerCase();
-        for (let banWord of keywords) {
-          if (lowerTitle.includes(banWord)) {
-            if (loggingEnabled)
-              console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
-            post.style.display = "none";
-            return;
+        if (blockKeywords) {
+          for (let banWord of keywords) {
+            if (lowerTitle.includes(banWord)) {
+              if (loggingEnabled)
+                console.log(
+                  `Hiding post based on keyword: ${banWord}: ${title}`
+                );
+              post.style.display = "none";
+              return;
+            }
           }
         }
 
         // Ban users
-        if (users.has(author)) {
+        if (blockUsers && users.has(author)) {
           if (loggingEnabled)
             console.log(`Hiding post based on user: ${author}: ${title}`);
           post.style.display = "none";
@@ -81,7 +86,7 @@ function banPosts(subreddits, keywords, users) {
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
       // Ban subreddits
-      if (subreddits.has(subreddit)) {
+      if (blockSubreddits && subreddits.has(subreddit)) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
         post.style.display = "none";
@@ -90,17 +95,19 @@ function banPosts(subreddits, keywords, users) {
 
       // Ban keywords
       lowerTitle = title.toLowerCase();
-      for (let banWord of keywords) {
-        if (lowerTitle.includes(banWord)) {
-          if (loggingEnabled)
-            console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
-          post.style.display = "none";
-          return;
+      if (blockKeywords) {
+        for (let banWord of keywords) {
+          if (lowerTitle.includes(banWord)) {
+            if (loggingEnabled)
+              console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
+            post.style.display = "none";
+            return;
+          }
         }
       }
 
       // Ban users
-      if (users.has(author)) {
+      if (blockUsers && users.has(author)) {
         if (loggingEnabled)
           console.log(`Hiding post based on user: ${author}: ${title}`);
         post.style.display = "none";
@@ -112,6 +119,7 @@ function banPosts(subreddits, keywords, users) {
 
 function banComments(users = []) {
   if (!window.location.pathname.includes("/comments/")) return;
+  if (!blockUsers) return;
 
   if (oldReddit) {
     const comments = document
@@ -153,7 +161,16 @@ function banComments(users = []) {
 
 function getSavedOptions() {
   chrome.storage.local.get(
-    ["hiddenUsers", "hiddenKeywords", "hiddenSubreddits", "loggingEnabled"],
+    [
+      "hiddenUsers",
+      "hiddenKeywords",
+      "hiddenSubreddits",
+      "loggingEnabled",
+      "expandImages",
+      "blockUsers",
+      "blockKeywords",
+      "blockSubreddits",
+    ],
     function (result) {
       if (result.hiddenUsers) {
         for (user of result.hiddenUsers) {
@@ -192,14 +209,31 @@ function getSavedOptions() {
       if (result.loggingEnabled !== undefined) {
         loggingEnabled = result.loggingEnabled;
       }
+      if (result.expandImages !== undefined) {
+        expandImages = result.expandImages;
+      }
+      if (result.blockUsers !== undefined) {
+        blockUsers = result.blockUsers;
+      }
+      if (result.blockKeywords !== undefined) {
+        blockKeywords = result.blockKeywords;
+      }
+      if (result.blockSubreddits !== undefined) {
+        blockSubreddits = result.blockSubreddits;
+      }
     }
   );
 }
 
+// Inputs
 let user_bans = new Set();
 let subreddit_bans = new Set();
 let keyword_bans = new Set();
-let loggingEnabled = true;
+let loggingEnabled = false;
+let expandImages = false;
+let blockUsers = false;
+let blockKeywords = false;
+let blockSubreddits = false;
 
 // Run the function when the DOM is fully loaded
 function observeDOMChanges() {
@@ -315,5 +349,3 @@ showImages();
 banComments(user_bans);
 banPosts(subreddit_bans, keyword_bans, user_bans);
 observeDOMChanges();
-
-// TODO: only enable nuke on thread
