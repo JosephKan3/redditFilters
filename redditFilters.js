@@ -41,7 +41,7 @@ function banPosts(subreddits, keywords, users) {
       const author = post.getAttribute("data-author");
       if (subreddit && title) {
         // Ban subreddits
-        if (blockSubreddits && subreddits.has(subreddit)) {
+        if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
           if (loggingEnabled)
             console.log(
               `Hiding post based on subreddit: ${subreddit}: ${title}`
@@ -86,7 +86,7 @@ function banPosts(subreddits, keywords, users) {
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
       // Ban subreddits
-      if (blockSubreddits && subreddits.has(subreddit)) {
+      if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
         post.style.display = "none";
