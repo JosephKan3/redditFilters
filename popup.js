@@ -14,23 +14,30 @@ function saveData() {
     .split("\n")
     .map((item) => item.trim());
 
+  // Fetch subreddits from input
+  const domainsString = document.getElementById("domainList").value;
+  const domainsArray = domainsString.split("\n").map((item) => item.trim());
+
   // Fetch preferences from input
   const loggingEnabled = document.getElementById("loggingEnabled").checked;
   const expandImages = document.getElementById("expandImages").checked;
   const blockUsers = document.getElementById("blockUsers").checked;
   const blockKeywords = document.getElementById("blockKeywords").checked;
   const blockSubreddits = document.getElementById("blockSubreddits").checked;
+  const blockDomains = document.getElementById("blockDomains").checked;
 
   // Save the data using the Chrome storage API
   chrome.storage.local.set({
     hiddenUsers: usersArray,
     hiddenKeywords: keywordsArray,
     hiddenSubreddits: subredditsArray,
+    hiddenDomains: domainsArray,
     loggingEnabled: loggingEnabled,
     expandImages: expandImages,
     blockUsers: blockUsers,
     blockKeywords: blockKeywords,
     blockSubreddits: blockSubreddits,
+    blockDomains: blockDomains,
   });
 }
 
@@ -41,11 +48,13 @@ function loadData() {
       "hiddenUsers",
       "hiddenKeywords",
       "hiddenSubreddits",
+      "hiddenDomains",
       "loggingEnabled",
       "expandImages",
       "blockUsers",
       "blockKeywords",
       "blockSubreddits",
+      "blockDomains",
     ],
     function (result) {
       if (result.hiddenUsers) {
@@ -61,6 +70,11 @@ function loadData() {
       if (result.hiddenSubreddits) {
         document.getElementById("subredditList").value =
           result.hiddenSubreddits.join("\n");
+      }
+
+      if (result.hiddenDomains) {
+        document.getElementById("domainList").value =
+          result.hiddenDomains.join("\n");
       }
 
       // Load preferences
@@ -80,6 +94,9 @@ function loadData() {
       if (result.blockSubreddits !== undefined) {
         document.getElementById("blockSubreddits").checked =
           result.blockSubreddits;
+      }
+      if (result.blockDomains !== undefined) {
+        document.getElementById("blockDomains").checked = result.blockDomains;
       }
     }
   );
@@ -123,11 +140,13 @@ function nuke() {
 document.getElementById("userList").addEventListener("input", saveData);
 document.getElementById("keywordList").addEventListener("input", saveData);
 document.getElementById("subredditList").addEventListener("input", saveData);
+document.getElementById("domainList").addEventListener("input", saveData);
 document.getElementById("loggingEnabled").addEventListener("change", saveData);
 document.getElementById("expandImages").addEventListener("change", saveData);
 document.getElementById("blockUsers").addEventListener("change", saveData);
 document.getElementById("blockKeywords").addEventListener("change", saveData);
 document.getElementById("blockSubreddits").addEventListener("change", saveData);
+document.getElementById("blockDomains").addEventListener("change", saveData);
 
 // Loads nuke button listener
 document.addEventListener("DOMContentLoaded", function () {
