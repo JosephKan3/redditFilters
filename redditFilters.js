@@ -272,14 +272,12 @@ let blockDomains = false;
 // Run the function when the DOM is fully loaded
 function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
-    mutations.forEach(function (mutation) {
-      if (mutation.addedNodes.length) {
-        // getSavedOptions();
-        banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
-        banComments(user_bans);
-        showImages();
-      }
-    });
+    if (mutations.some((mutation) => mutation.addedNodes.length)) {
+      getSavedOptions();
+      banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+      banComments(user_bans);
+      showImages();
+    }
   });
 
   var config = { childList: true, subtree: true };
