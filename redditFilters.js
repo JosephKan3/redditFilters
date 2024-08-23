@@ -206,7 +206,7 @@ function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
       if (mutation.addedNodes.length) {
-        getSavedOptions();
+        // getSavedOptions();
         banPosts(subreddit_bans, keyword_bans, user_bans);
         banComments(user_bans);
         showImages();
