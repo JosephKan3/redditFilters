@@ -22,7 +22,13 @@
     </div>
     <!-- Users -->
     <div>
-      <h2>Blocked Users</h2>
+      <div class="toggle">
+        <h2>Blocked Users</h2>
+        <label class="switch">
+          <input type="checkbox" id="blockUsers" checked />
+          <span class="slider round"></span>
+        </label>
+      </div>
       <textarea
         class="inputList"
         id="userList"
@@ -31,7 +37,13 @@
     </div>
     <!-- Keywords -->
     <div>
-      <h2>Blocked Keywords</h2>
+      <div class="toggle">
+        <h2>Blocked Keywords</h2>
+        <label class="switch">
+          <input type="checkbox" id="blockKeywords" checked />
+          <span class="slider round"></span>
+        </label>
+      </div>
       <textarea
         class="inputList"
         id="keywordList"
@@ -40,19 +52,50 @@
     </div>
     <!-- Subreddits -->
     <div>
-      <h2>Blocked Subreddits</h2>
+      <div class="toggle">
+        <h2>Blocked Subreddits</h2>
+        <label class="switch">
+          <input type="checkbox" id="blockSubreddits" checked />
+          <span class="slider round"></span>
+        </label>
+      </div>
       <textarea
         class="inputList"
         id="subredditList"
         placeholder="Enter each subreddit on a new line"
       ></textarea>
     </div>
+    <!-- Domains -->
+    <div>
+      <div class="toggle">
+        <h2>Blocked News Domains</h2>
+        <label class="switch">
+          <input type="checkbox" id="blockDomains" checked />
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <textarea
+        class="inputList"
+        id="domainList"
+        placeholder="Enter each domain on a new line"
+      ></textarea>
+    </div>
     <!-- Logging Preferences -->
     <div class="end">
-      <label>
-        <input type="checkbox" id="loggingPreference" checked />
-        Print Logs?
-      </label>
+      <div class="smallToggle">
+        <h3>Print Logs?</h3>
+        <label class="switch small">
+          <input type="checkbox" id="loggingEnabled" checked />
+          <span class="slider round small"></span>
+        </label>
+      </div>
+      <div class="smallToggle">
+        <h3>Expand Images?</h3>
+        <label class="switch small">
+          <input type="checkbox" id="expandImages" checked />
+          <span class="slider round small"></span>
+        </label>
+      </div>
     </div>
     <script src="popup.js"></script>
   </body>

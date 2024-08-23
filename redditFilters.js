@@ -2,6 +2,7 @@
 const oldReddit = window.location.hostname === "old.reddit.com";
 
 function showImages() {
+  if (!expandImages) return;
   // Handle old reddit design
   if (oldReddit) {
     const links = document.querySelectorAll("a");
@@ -24,7 +25,7 @@ function showImages() {
   }
 }
 
-function banPosts(subreddits, keywords, users) {
+function banPosts(subreddits, keywords, users, domains) {
   // Do not ban posts of a dedicated thread page
   if (window.location.pathname.includes("/comments/")) return;
   // Handle old reddit design
@@ -38,9 +39,10 @@ function banPosts(subreddits, keywords, users) {
       const subreddit = post.getAttribute("data-subreddit");
       const title = post.querySelectorAll(`a.title`)[0].innerHTML;
       const author = post.getAttribute("data-author");
+      const domain = post.getAttribute("data-domain");
       if (subreddit && title) {
         // Ban subreddits
-        if (subreddits.has(subreddit)) {
+        if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
           if (loggingEnabled)
             console.log(
               `Hiding post based on subreddit: ${subreddit}: ${title}`
@@ -51,19 +53,31 @@ function banPosts(subreddits, keywords, users) {
 
         // Ban keywords
         lowerTitle = title.toLowerCase();
-        for (let banWord of keywords) {
-          if (lowerTitle.includes(banWord)) {
-            if (loggingEnabled)
-              console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
-            post.style.display = "none";
-            return;
+        if (blockKeywords) {
+          for (let banWord of keywords) {
+            if (lowerTitle.includes(banWord)) {
+              if (loggingEnabled)
+                console.log(
+                  `Hiding post based on keyword: ${banWord}: ${title}`
+                );
+              post.style.display = "none";
+              return;
+            }
           }
         }
 
         // Ban users
-        if (users.has(author)) {
+        if (blockUsers && users.has(author)) {
           if (loggingEnabled)
             console.log(`Hiding post based on user: ${author}: ${title}`);
+          post.style.display = "none";
+          return;
+        }
+
+        // Ban domains
+        if (blockDomains && domains.has(domain.toLowerCase())) {
+          if (loggingEnabled)
+            console.log(`Hiding post based on domain: ${domain}: ${title}`);
           post.style.display = "none";
           return;
         }
@@ -80,8 +94,9 @@ function banPosts(subreddits, keywords, users) {
       const subreddit = post.getAttribute("subreddit-prefixed-name").slice(2); // Slices off r/ prefix from subreddit name
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
+      const domain = post.getAttribute("domain");
       // Ban subreddits
-      if (subreddits.has(subreddit)) {
+      if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
         post.style.display = "none";
@@ -90,19 +105,29 @@ function banPosts(subreddits, keywords, users) {
 
       // Ban keywords
       lowerTitle = title.toLowerCase();
-      for (let banWord of keywords) {
-        if (lowerTitle.includes(banWord)) {
-          if (loggingEnabled)
-            console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
-          post.style.display = "none";
-          return;
+      if (blockKeywords) {
+        for (let banWord of keywords) {
+          if (lowerTitle.includes(banWord)) {
+            if (loggingEnabled)
+              console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
+            post.style.display = "none";
+            return;
+          }
         }
       }
 
       // Ban users
-      if (users.has(author)) {
+      if (blockUsers && users.has(author)) {
         if (loggingEnabled)
           console.log(`Hiding post based on user: ${author}: ${title}`);
+        post.style.display = "none";
+        return;
+      }
+
+      // Ban domains
+      if (blockDomains && domains.has(domain.toLowerCase())) {
+        if (loggingEnabled)
+          console.log(`Hiding post based on domain: ${domain}: ${title}`);
         post.style.display = "none";
         return;
       }
@@ -112,6 +137,7 @@ function banPosts(subreddits, keywords, users) {
 
 function banComments(users = []) {
   if (!window.location.pathname.includes("/comments/")) return;
+  if (!blockUsers) return;
 
   if (oldReddit) {
     const comments = document
@@ -153,7 +179,18 @@ function banComments(users = []) {
 
 function getSavedOptions() {
   chrome.storage.local.get(
-    ["hiddenUsers", "hiddenKeywords", "hiddenSubreddits", "loggingEnabled"],
+    [
+      "hiddenUsers",
+      "hiddenKeywords",
+      "hiddenSubreddits",
+      "hiddenDomains",
+      "loggingEnabled",
+      "expandImages",
+      "blockUsers",
+      "blockKeywords",
+      "blockSubreddits",
+      "blockDomains",
+    ],
     function (result) {
       if (result.hiddenUsers) {
         for (user of result.hiddenUsers) {
@@ -189,17 +226,48 @@ function getSavedOptions() {
         }
       }
 
+      if (result.hiddenDomains) {
+        for (domain of result.hiddenDomains) {
+          // Regex for matching domain from user inputs
+          const pattern = /^(?:https?:\/\/)?(?:www\.)?([^\/\?#]+).*$/i;
+          const match = domain.replace(pattern, "$1") ?? "";
+          domain_bans.add(match.toLowerCase());
+        }
+      }
+
       if (result.loggingEnabled !== undefined) {
         loggingEnabled = result.loggingEnabled;
+      }
+      if (result.expandImages !== undefined) {
+        expandImages = result.expandImages;
+      }
+      if (result.blockUsers !== undefined) {
+        blockUsers = result.blockUsers;
+      }
+      if (result.blockKeywords !== undefined) {
+        blockKeywords = result.blockKeywords;
+      }
+      if (result.blockSubreddits !== undefined) {
+        blockSubreddits = result.blockSubreddits;
+      }
+      if (result.blockDomains !== undefined) {
+        blockDomains = result.blockDomains;
       }
     }
   );
 }
 
+// Inputs
 let user_bans = new Set();
 let subreddit_bans = new Set();
 let keyword_bans = new Set();
-let loggingEnabled = true;
+let domain_bans = new Set();
+let loggingEnabled = false;
+let expandImages = false;
+let blockUsers = false;
+let blockKeywords = false;
+let blockSubreddits = false;
+let blockDomains = false;
 
 // Run the function when the DOM is fully loaded
 function observeDOMChanges() {
@@ -207,7 +275,7 @@ function observeDOMChanges() {
     mutations.forEach(function (mutation) {
       if (mutation.addedNodes.length) {
         // getSavedOptions();
-        banPosts(subreddit_bans, keyword_bans, user_bans);
+        banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
         banComments(user_bans);
         showImages();
       }
@@ -313,7 +381,5 @@ chrome.runtime.onMessage.addListener(handleNukeRequest);
 getSavedOptions();
 showImages();
 banComments(user_bans);
-banPosts(subreddit_bans, keyword_bans, user_bans);
+banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
 observeDOMChanges();
-
-// TODO: only enable nuke on thread
