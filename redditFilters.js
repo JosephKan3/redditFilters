@@ -177,7 +177,7 @@ function banComments(users = []) {
   }
 }
 
-function getSavedOptions() {
+function getSavedOptions(callback) {
   chrome.storage.local.get(
     [
       "hiddenUsers",
@@ -186,6 +186,7 @@ function getSavedOptions() {
       "hiddenDomains",
       "loggingEnabled",
       "expandImages",
+      "showBlockButtons",
       "blockUsers",
       "blockKeywords",
       "blockSubreddits",
@@ -241,6 +242,9 @@ function getSavedOptions() {
       if (result.expandImages !== undefined) {
         expandImages = result.expandImages;
       }
+      if (result.showBlockButtons !== undefined) {
+        showBlockButtons = result.showBlockButtons;
+      }
       if (result.blockUsers !== undefined) {
         blockUsers = result.blockUsers;
       }
@@ -253,6 +257,7 @@ function getSavedOptions() {
       if (result.blockDomains !== undefined) {
         blockDomains = result.blockDomains;
       }
+      if (callback) callback();
     }
   );
 }
@@ -268,15 +273,98 @@ let blockUsers = false;
 let blockKeywords = false;
 let blockSubreddits = false;
 let blockDomains = false;
+let showBlockButtons = true;
 
-// Run the function when the DOM is fully loaded
+function addBlockButtons() {
+  if (oldReddit) return;
+
+  // Only show on home feed, not individual subreddits
+  const path = window.location.pathname;
+  const srMatch = path.match(/^\/r\/([^/]+)/);
+  if (srMatch && srMatch[1] !== "home") return;
+
+  if (!showBlockButtons) {
+    document.querySelectorAll('.reddit-filters-block-wrapper, .reddit-filters-block-btn').forEach(el => el.remove());
+    document.querySelectorAll("shreddit-post").forEach(post => delete post.dataset.blockBtnAdded);
+    return;
+  }
+  
+  if (!document.getElementById("block-btn-style")) {
+    const style = document.createElement("style");
+    style.id = "block-btn-style";
+    style.textContent = `
+      .reddit-filters-block-wrapper {
+        display: inline-flex !important;
+        align-items: center !important;
+        margin-left: 6px !important;
+      }
+      .reddit-filters-block-btn {
+        background: #d93a00 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 0px 4px !important;
+        font-size: 11px !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+        line-height: 1.2 !important;
+        min-height: 16px !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  const posts = document.querySelectorAll("shreddit-post");
+  posts.forEach((post) => {
+    if (post.dataset.blockBtnAdded) return;
+    const subreddit = post.getAttribute("subreddit-prefixed-name");
+    if (!subreddit) return;
+    const subredditName = subreddit.slice(2);
+    
+    const faceplate = post.querySelector("faceplate-hovercard");
+    const srLink = faceplate ? faceplate.querySelector('a[href^="/r/"]') : null;
+    
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "×";
+    btn.className = "reddit-filters-block-btn";
+    btn.title = `Block r/${subredditName}`;
+    
+    if (srLink && srLink.parentElement) {
+      const wrapper = document.createElement("span");
+      wrapper.className = "reddit-filters-block-wrapper";
+      wrapper.appendChild(btn);
+      srLink.parentElement.insertBefore(wrapper, srLink.nextSibling);
+    } else {
+      post.insertBefore(btn, post.firstChild);
+    }
+    
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chrome.storage.local.get(["hiddenSubreddits"], (res) => {
+        const current = new Set();
+        if (res.hiddenSubreddits) {
+          res.hiddenSubreddits.forEach((sr) => current.add(sr.toLowerCase()));
+        }
+        current.add(subredditName.toLowerCase());
+        chrome.storage.local.set({ hiddenSubreddits: Array.from(current) });
+      });
+      post.style.display = "none";
+    };
+    
+    post.dataset.blockBtnAdded = "true";
+  });
+}
 function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
     if (mutations.some((mutation) => mutation.addedNodes.length)) {
-      getSavedOptions();
-      banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
-      banComments(user_bans);
-      showImages();
+      getSavedOptions(() => {
+        banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+        banComments(user_bans);
+        showImages();
+        addBlockButtons();
+      });
     }
   });
 
@@ -372,12 +460,29 @@ function handleNukeRequest(request, sender, sendResponse) {
   }
 }
 
-// Listen for nuke request
-chrome.runtime.onMessage.addListener(handleNukeRequest);
+// Listen for nuke request and block button toggle
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "nuke") {
+    handleNukeRequest(message, sender, sendResponse);
+  } else if (message.action === "toggleBlockButtons") {
+    showBlockButtons = message.value;
+    addBlockButtons();
+    sendResponse({ status: 200 });
+  }
+});
+
+// Listen for storage changes to update block button visibility
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.showBlockButtons) {
+    showBlockButtons = changes.showBlockButtons.newValue;
+    addBlockButtons();
+  }
+});
 
 // Start observing and hide existing elements
 getSavedOptions();
 showImages();
+addBlockButtons();
 banComments(user_bans);
 banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
 observeDOMChanges();

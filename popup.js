@@ -21,6 +21,7 @@ function saveData() {
   // Fetch preferences from input
   const loggingEnabled = document.getElementById("loggingEnabled").checked;
   const expandImages = document.getElementById("expandImages").checked;
+  const showBlockButtons = document.getElementById("showBlockButtons").checked;
   const blockUsers = document.getElementById("blockUsers").checked;
   const blockKeywords = document.getElementById("blockKeywords").checked;
   const blockSubreddits = document.getElementById("blockSubreddits").checked;
@@ -35,6 +36,7 @@ function saveData() {
     hiddenDomains: domainsArray,
     loggingEnabled: loggingEnabled,
     expandImages: expandImages,
+    showBlockButtons: showBlockButtons,
     blockUsers: blockUsers,
     blockKeywords: blockKeywords,
     blockSubreddits: blockSubreddits,
@@ -53,6 +55,7 @@ function loadData() {
       "hiddenDomains",
       "loggingEnabled",
       "expandImages",
+      "showBlockButtons",
       "blockUsers",
       "blockKeywords",
       "blockSubreddits",
@@ -87,6 +90,11 @@ function loadData() {
       }
       if (result.expandImages !== undefined) {
         document.getElementById("expandImages").checked = result.expandImages;
+      }
+      if (result.showBlockButtons !== undefined) {
+        document.getElementById("showBlockButtons").checked = result.showBlockButtons;
+      } else {
+        document.getElementById("showBlockButtons").checked = true;
       }
       if (result.blockUsers !== undefined) {
         document.getElementById("blockUsers").checked = result.blockUsers;
@@ -180,6 +188,22 @@ document.getElementById("userList").addEventListener("input", saveData);
 document.getElementById("keywordList").addEventListener("input", saveData);
 document.getElementById("subredditList").addEventListener("input", saveData);
 document.getElementById("domainList").addEventListener("input", saveData);
+
+// Toggle change listeners - save and notify content scripts immediately
+const toggleIds = ["loggingEnabled", "expandImages", "showBlockButtons", "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains", "nukeConfirm"];
+toggleIds.forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => {
+    saveData();
+    if (id === "showBlockButtons") {
+      const val = document.getElementById(id).checked;
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, { action: "toggleBlockButtons", value: val }).catch(() => {});
+        });
+      });
+    }
+  });
+});
 
 // Drag and drop logic
 let draggedSection = null;
