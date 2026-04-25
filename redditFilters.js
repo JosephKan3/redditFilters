@@ -47,6 +47,7 @@ function banPosts(subreddits, keywords, users, domains) {
             console.log(
               `Hiding post based on subreddit: ${subreddit}: ${title}`
             );
+          incrementStat("subreddits", subreddit);
           post.style.display = "none";
           return;
         }
@@ -59,6 +60,7 @@ function banPosts(subreddits, keywords, users, domains) {
                 console.log(
                   `Hiding post based on keyword: ${banWord}: ${title}`
                 );
+              incrementStat("keywords", banWord);
               post.style.display = "none";
               return;
             }
@@ -107,6 +109,7 @@ function banPosts(subreddits, keywords, users, domains) {
       if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
+        incrementStat("subreddits", subreddit);
         hideEl(post);
         return;
       }
@@ -117,6 +120,7 @@ function banPosts(subreddits, keywords, users, domains) {
           if (matchesKeyword(title, banWord)) {
             if (loggingEnabled)
               console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
+            incrementStat("keywords", banWord);
             hideEl(post);
             return;
           }
@@ -310,6 +314,16 @@ const matchesKeyword = (text, keyword) => {
   return text.includes(keyword);
 };
 
+const incrementStat = (type, key) => {
+  chrome.storage.local.get(["statsData"], (res) => {
+    let stats = res.statsData || { keywords: {}, subreddits: {} };
+    if (!stats[type]) stats[type] = {};
+    const normalized = key.toLowerCase();
+    stats[type][normalized] = (stats[type][normalized] || 0) + 1;
+    chrome.storage.local.set({ statsData: stats });
+  });
+};
+
 let blockUsers = false;
 let blockKeywords = false;
 let blockSubreddits = false;
@@ -324,13 +338,54 @@ const hidePostWithHrs = (p) => {
   target.style.display = "none";
 };
 
+const showBlockedSubredditBanner = (blockedSet) => {
+  if (oldReddit) return;
+  const path = window.location.pathname;
+  const srMatch = path.match(/^\/r\/([^/]+)/);
+  if (!srMatch) return;
+  const srName = srMatch[1].toLowerCase();
+  const exclusions = ["home", "all", "popular", "new"];
+  if (exclusions.includes(srName)) return;
+  if (!blockedSet.has(srName)) return;
+
+  // Prevent duplicate banners
+  if (document.getElementById("blocked-sr-banner")) return;
+
+  const feed = document.querySelector("shreddit-feed");
+  if (!feed) return;
+
+  // Hide the feed
+  feed.style.display = "none";
+
+  // Find the main content area to insert the banner
+  const main = document.querySelector("main.main") || document.querySelector("shreddit-app");
+  if (!main) return;
+
+  const banner = document.createElement("div");
+  banner.id = "blocked-sr-banner";
+  banner.style.cssText = `
+    text-align: center;
+    padding: 40px 20px;
+    color: #ccc;
+    font-size: 16px;
+  `;
+  banner.innerHTML = `
+    <div style="font-size: 24px; margin-bottom: 8px;">🚫</div>
+    <div><strong>r/${srName}</strong> is currently blocked.</div>
+    <div style="font-size: 13px; margin-top: 6px; color: #888;">Unblock it in the Advanced Reddit Filter's settings to see posts.</div>
+  `;
+
+  const mainContainer = main.querySelector("div.subgrid-container") || main;
+  mainContainer.insertBefore(banner, mainContainer.firstChild);
+};
+
 function addBlockButtons() {
   if (oldReddit) return;
 
-  // Only show on home feed, not individual subreddits
+  // Only show on home feed, r/all, r/popular, r/new — not individual subreddits
   const path = window.location.pathname;
   const srMatch = path.match(/^\/r\/([^/]+)/);
-  if (srMatch && srMatch[1] !== "home") return;
+  if (srMatch && srMatch[1] !== "home" && srMatch[1] !== "all" && srMatch[1] !== "popular" && srMatch[1] !== "new") return;
 
   if (!showBlockButtons) {
     document.querySelectorAll('.reddit-filters-block-wrapper, .reddit-filters-block-btn').forEach(el => el.remove());
@@ -410,12 +465,13 @@ function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
     if (mutations.some((mutation) => mutation.addedNodes.length)) {
      getSavedOptions(() => {
-         banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
-         banComments(user_bans);
-         showImages();
-         addBlockButtons();
-         cleanupHrs();
-       });
+          banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+          banComments(user_bans);
+          showImages();
+          addBlockButtons();
+          cleanupHrs();
+          showBlockedSubredditBanner(subreddit_bans);
+        });
     }
   });
 
@@ -537,6 +593,7 @@ getSavedOptions(() => {
   banComments(user_bans);
   banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
   cleanupHrs();
+  showBlockedSubredditBanner(subreddit_bans);
 });
 
 observeDOMChanges();

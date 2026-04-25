@@ -383,3 +383,98 @@ input:checked + .slider.small:before {
   25% { transform: translateX(-50%) scale(1); }
   100% { opacity: 1; }
 }
+
+/* Stats View */
+.statsView {
+  padding: 0.5rem 0;
+}
+
+.statsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.statsHeader h2 {
+  margin: 0;
+}
+
+.backBtn {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.statsSection {
+  margin-bottom: 1rem;
+}
+
+.statsSection h3 {
+  margin: 0.25rem 0 0.5rem 0;
+  font-size: 14px;
+}
+
+.statsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.statsTable th,
+.statsTable td {
+  padding: 3px 6px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.statsTable th {
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.statsTable td:last-child {
+  width: 24px;
+  text-align: center;
+}
+
+.statRemoveBtn {
+  background: #ff0066;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.statRemoveBtn:hover {
+  background: #cc0052;
+}
+
+.statsBtn {
+  background-color: #663399;
+  color: white;
+}
+
+.resetStatsBtn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 0.5rem;
+  background-color: #d93a00;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.resetStatsBtn:hover {
+  background-color: #b83000;
+}

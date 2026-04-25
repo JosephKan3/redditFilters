@@ -144,8 +144,36 @@
     <div class="importExportSection">
       <button id="exportBtn" class="actionButton exportBtn">Export</button>
       <button id="importBtn" class="actionButton importBtn">Import</button>
+      <button id="statsBtn" class="actionButton statsBtn">Stats</button>
       <input type="file" id="importFileInput" accept=".jsonl,.txt" style="display:none" />
       <div id="importSuccess" class="importSuccess" style="display:none">Successfully imported!</div>
+    </div>
+
+    <!-- Stats View -->
+    <div id="statsView" class="statsView" style="display:none">
+      <div class="statsHeader">
+        <h2>Stats</h2>
+        <button id="backBtn" class="actionButton backBtn">Back</button>
+      </div>
+      <div class="statsSection">
+        <h3>Blocked Keywords</h3>
+        <table id="keywordStatsTable" class="statsTable">
+          <thead>
+            <tr><th>Keyword</th><th>Hits</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="statsSection">
+        <h3>Blocked Subreddits</h3>
+        <table id="subredditStatsTable" class="statsTable">
+          <thead>
+            <tr><th>Subreddit</th><th>Hits</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button id="resetStatsBtn" class="actionButton resetStatsBtn">Reset All Stats</button>
     </div>
 
     <script src="popup.js"></script>

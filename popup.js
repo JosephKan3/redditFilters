@@ -527,3 +527,64 @@ document.getElementById("importFileInput").addEventListener("change", function (
     e.target.value = ""; // Reset so same file can be re-imported
   }
 });
+
+// Stats
+const mainSections = document.querySelectorAll(".draggableSection, .end, .importExportSection, .drop-zone");
+
+function showStats() {
+  mainSections.forEach(el => el.style.display = "none");
+  document.getElementById("statsView").style.display = "block";
+  document.querySelector("h1").textContent = "Stats";
+  chrome.storage.local.get(["statsData"], (res) => {
+    const stats = res.statsData || { keywords: {}, subreddits: {} };
+    renderStatsTable("keywordStatsTable", stats.keywords);
+    renderStatsTable("subredditStatsTable", stats.subreddits);
+  });
+}
+
+function hideStats() {
+  mainSections.forEach(el => el.style.display = "");
+  document.getElementById("statsView").style.display = "none";
+  document.querySelector("h1").textContent = "Advanced Reddit Filters";
+}
+
+function renderStatsTable(tableId, data) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  tbody.innerHTML = "";
+  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  sorted.forEach(([key, count]) => {
+    const tr = document.createElement("tr");
+    const tdKey = document.createElement("td");
+    tdKey.textContent = key;
+    const tdCount = document.createElement("td");
+    tdCount.textContent = count;
+    const tdRemove = document.createElement("td");
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "×";
+    removeBtn.className = "statRemoveBtn";
+    removeBtn.title = "Remove from stats";
+    removeBtn.addEventListener("click", () => {
+      chrome.storage.local.get(["statsData"], (res) => {
+        const stats = res.statsData || { keywords: {}, subreddits: {} };
+        const type = tableId === "keywordStatsTable" ? "keywords" : "subreddits";
+        delete stats[type][key];
+        chrome.storage.local.set({ statsData: stats });
+        showStats();
+      });
+    });
+    tdRemove.appendChild(removeBtn);
+    tr.appendChild(tdKey);
+    tr.appendChild(tdCount);
+    tr.appendChild(tdRemove);
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("statsBtn").addEventListener("click", showStats);
+document.getElementById("backBtn").addEventListener("click", hideStats);
+document.getElementById("resetStatsBtn").addEventListener("click", () => {
+  if (confirm("Reset all stats?")) {
+    chrome.storage.local.set({ statsData: { keywords: {}, subreddits: {} } });
+    showStats();
+  }
+});
