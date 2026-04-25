@@ -478,3 +478,6 @@ input:checked + .slider.small:before {
 .resetStatsBtn:hover {
   background-color: #b83000;
 }
+
+/* Search */
+

@@ -317,6 +317,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupDragDrop();
 });
 
+
 // Loads saved data back into input
 document.addEventListener("DOMContentLoaded", loadData);
 

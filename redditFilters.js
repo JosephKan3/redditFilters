@@ -31,6 +31,16 @@ function banPosts(subreddits, keywords, users, domains) {
   // Handle old reddit design
   if (oldReddit) {
     const posts = document.querySelectorAll(".thing:not(.promotedlink)");
+    const allPosts = Array.from(posts);
+    // Restore any hidden posts from bypassed subreddit before filtering others
+    if (bypassedSubreddits.size > 0) {
+      allPosts.forEach((post) => {
+        if (post.getAttribute("data-subreddit") && bypassedSubreddits.has(post.getAttribute("data-subreddit").toLowerCase())) {
+          post.style.display = "";
+        }
+      });
+    }
+
     const visiblePosts = Array.from(posts).filter(
       (el) => window.getComputedStyle(el).display !== "none"
     ); // Ignores hidden posts to avoid O(n^2) due to constant dom changes
@@ -41,6 +51,12 @@ function banPosts(subreddits, keywords, users, domains) {
       const author = post.getAttribute("data-author");
       const domain = post.getAttribute("data-domain");
       if (subreddit && title) {
+        // Always show bypassed subreddit posts, skip all other filters
+        if (bypassedSubreddits.has(subreddit.toLowerCase())) {
+          post.style.display = "";
+          return;
+        }
+
         // Ban subreddits
         if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
           if (loggingEnabled)
@@ -87,6 +103,21 @@ function banPosts(subreddits, keywords, users, domains) {
     // Handle new reddit design
   } else {
     const posts = document.querySelectorAll("shreddit-post");
+    const allPosts = Array.from(posts);
+    // Restore any hidden posts from bypassed subreddit before filtering others
+    if (bypassedSubreddits.size > 0) {
+      allPosts.forEach((post) => {
+        const sr = post.getAttribute("subreddit-prefixed-name");
+        if (sr && bypassedSubreddits.has(sr.slice(2).toLowerCase())) {
+          let target = post;
+          if (post.parentElement && post.parentElement.tagName === "ARTICLE") {
+            target = post.parentElement;
+          }
+          target.style.display = "";
+        }
+      });
+    }
+
     const visiblePosts = Array.from(posts).filter(
       (el) => window.getComputedStyle(el).display !== "none"
     ); // Ignores hidden posts to avoid O(n^2) due to constant dom changes
@@ -96,6 +127,8 @@ function banPosts(subreddits, keywords, users, domains) {
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
       const domain = post.getAttribute("domain");
+
+      if (bypassedSubreddits.has(subreddit.toLowerCase())) return;
 
       const hideEl = (el) => {
         let target = el;
@@ -329,6 +362,7 @@ let blockKeywords = false;
 let blockSubreddits = false;
 let blockDomains = false;
 let showBlockButtons = true;
+const bypassedSubreddits = new Set();
 
 const hidePostWithHrs = (p) => {
   let target = p;
@@ -373,10 +407,73 @@ const showBlockedSubredditBanner = (blockedSet) => {
     <div style="font-size: 24px; margin-bottom: 8px;">🚫</div>
     <div><strong>r/${srName}</strong> is currently blocked.</div>
     <div style="font-size: 13px; margin-top: 6px; color: #888;">Unblock it in the Advanced Reddit Filter's settings to see posts.</div>
+    <button id="bypass-block-btn" style="margin-top: 16px; padding: 8px 20px; background: #d93a00; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">View Posts</button>
   `;
 
   const mainContainer = main.querySelector("div.subgrid-container") || main;
   mainContainer.insertBefore(banner, mainContainer.firstChild);
+
+  document.getElementById("bypass-block-btn").addEventListener("click", () => {
+    bypassedSubreddits.add(srName);
+    banner.style.display = "none";
+    feed.style.display = "";
+    banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+    cleanupHrs();
+
+  // Add Unblock button at top of page
+    const createUnblockBtn = () => {
+      const btn = document.createElement("button");
+      btn.id = "unblock-" + srName;
+      btn.textContent = "Unblock r/" + srName;
+      btn.style.cssText = `
+        margin: 8px 0; padding: 6px 14px; background: #d93a00; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold;
+      `;
+      btn.addEventListener("click", () => {
+        chrome.storage.local.get(["hiddenSubreddits"], (res) => {
+          const current = res.hiddenSubreddits || [];
+          const updated = current.filter(s => s.toLowerCase() !== srName);
+          chrome.storage.local.set({ hiddenSubreddits: updated });
+        });
+        subreddit_bans.delete(srName);
+        btn.remove();
+        bypassedSubreddits.delete(srName);
+      });
+      return btn;
+    };
+
+    const placeUnblockBtn = () => {
+      // Target the h1 containing the subreddit name (e.g., "r/Clamworks") on new Reddit
+      const srTitleH1 = document.querySelector('h1.flex.items-center.font-bold');
+      if (srTitleH1 && srTitleH1.textContent.includes(srName)) {
+        const btn = createUnblockBtn();
+        btn.style.marginLeft = '8px';
+        btn.style.fontSize = 'inherit';
+        btn.style.padding = '2px 8px';
+        srTitleH1.appendChild(btn);
+        return true;
+      }
+
+      // Fallback: first article in feed
+      const firstArticle = document.querySelector('shreddit-feed article:first-of-type');
+      if (firstArticle) {
+        const btn = createUnblockBtn();
+        firstArticle.insertBefore(btn, firstArticle.firstChild);
+        return true;
+      }
+      return false;
+    };
+
+    if (!placeUnblockBtn()) {
+      setTimeout(() => {
+        if (!placeUnblockBtn()) {
+          const btn = createUnblockBtn();
+          btn.style.display = "block";
+          btn.style.margin = "10px auto";
+          feed.insertBefore(btn, feed.firstChild);
+        }
+      }, 800);
+    }
+  });
 };
 
 function addBlockButtons() {
