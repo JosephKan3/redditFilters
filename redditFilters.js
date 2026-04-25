@@ -95,11 +95,20 @@ function banPosts(subreddits, keywords, users, domains) {
       const title = post.getAttribute("post-title");
       const author = post.getAttribute("author");
       const domain = post.getAttribute("domain");
+
+      const hideEl = (el) => {
+        let target = el;
+        if (el.parentElement && el.parentElement.tagName === "ARTICLE") {
+          target = el.parentElement;
+        }
+        target.style.display = "none";
+      };
+
       // Ban subreddits
       if (blockSubreddits && subreddits.has(subreddit.toLowerCase())) {
         if (loggingEnabled)
           console.log(`Hiding post based on subreddit: ${subreddit}: ${title}`);
-        post.style.display = "none";
+        hideEl(post);
         return;
       }
 
@@ -110,7 +119,7 @@ function banPosts(subreddits, keywords, users, domains) {
           if (lowerTitle.includes(banWord)) {
             if (loggingEnabled)
               console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
-            post.style.display = "none";
+            hideEl(post);
             return;
           }
         }
@@ -120,7 +129,7 @@ function banPosts(subreddits, keywords, users, domains) {
       if (blockUsers && users.has(author)) {
         if (loggingEnabled)
           console.log(`Hiding post based on user: ${author}: ${title}`);
-        post.style.display = "none";
+        hideEl(post);
         return;
       }
 
@@ -128,11 +137,37 @@ function banPosts(subreddits, keywords, users, domains) {
       if (blockDomains && domains.has(domain.toLowerCase())) {
         if (loggingEnabled)
           console.log(`Hiding post based on domain: ${domain}: ${title}`);
-        post.style.display = "none";
+        hideEl(post);
         return;
       }
     });
   }
+
+  // Cleanup: hide any HR separators adjacent to hidden articles
+  cleanupHrs();
+}
+
+function cleanupHrs() {
+  if (oldReddit) return;
+  const feed = document.querySelector("shreddit-feed");
+  if (!feed) return;
+  Array.from(feed.children).forEach((child) => {
+    if (child.tagName !== "HR") return;
+    // Find the nearest non-HR siblings
+    let prev = child.previousElementSibling;
+    while (prev && prev.tagName === "HR") prev = prev.previousElementSibling;
+    let next = child.nextElementSibling;
+    while (next && next.tagName === "HR") next = next.nextElementSibling;
+    // Only hide if both adjacent content elements are hidden, or one side is missing
+    const prevHidden = !prev || window.getComputedStyle(prev).display === "none";
+    const nextHidden = !next || window.getComputedStyle(next).display === "none";
+    if (prevHidden && nextHidden) {
+      child.style.display = "none";
+    } else {
+      child.style.display = "";
+    }
+  });
+
 }
 
 function banComments(users = []) {
@@ -275,6 +310,14 @@ let blockSubreddits = false;
 let blockDomains = false;
 let showBlockButtons = true;
 
+const hidePostWithHrs = (p) => {
+  let target = p;
+  if (p.parentElement && p.parentElement.tagName === "ARTICLE") {
+    target = p.parentElement;
+  }
+  target.style.display = "none";
+};
+
 function addBlockButtons() {
   if (oldReddit) return;
 
@@ -336,22 +379,23 @@ function addBlockButtons() {
       wrapper.appendChild(btn);
       srLink.parentElement.insertBefore(wrapper, srLink.nextSibling);
     } else {
-      post.insertBefore(btn, post.firstChild);
-    }
-    
-    btn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      chrome.storage.local.get(["hiddenSubreddits"], (res) => {
-        const current = new Set();
-        if (res.hiddenSubreddits) {
-          res.hiddenSubreddits.forEach((sr) => current.add(sr.toLowerCase()));
-        }
-        current.add(subredditName.toLowerCase());
-        chrome.storage.local.set({ hiddenSubreddits: Array.from(current) });
-      });
-      post.style.display = "none";
-    };
+       post.insertBefore(btn, post.firstChild);
+     }
+
+     btn.onclick = (e) => {
+       e.preventDefault();
+       e.stopPropagation();
+       chrome.storage.local.get(["hiddenSubreddits"], (res) => {
+         const current = new Set();
+         if (res.hiddenSubreddits) {
+           res.hiddenSubreddits.forEach((sr) => current.add(sr.toLowerCase()));
+         }
+         current.add(subredditName.toLowerCase());
+         chrome.storage.local.set({ hiddenSubreddits: Array.from(current) });
+       });
+       hidePostWithHrs(post);
+        cleanupHrs();
+     };
     
     post.dataset.blockBtnAdded = "true";
   });
@@ -359,12 +403,13 @@ function addBlockButtons() {
 function observeDOMChanges() {
   var observer = new MutationObserver(function (mutations) {
     if (mutations.some((mutation) => mutation.addedNodes.length)) {
-      getSavedOptions(() => {
-        banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
-        banComments(user_bans);
-        showImages();
-        addBlockButtons();
-      });
+     getSavedOptions(() => {
+         banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+         banComments(user_bans);
+         showImages();
+         addBlockButtons();
+         cleanupHrs();
+       });
     }
   });
 
@@ -480,9 +525,12 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 // Start observing and hide existing elements
-getSavedOptions();
-showImages();
-addBlockButtons();
-banComments(user_bans);
-banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+getSavedOptions(() => {
+  showImages();
+  addBlockButtons();
+  banComments(user_bans);
+  banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
+  cleanupHrs();
+});
+
 observeDOMChanges();
