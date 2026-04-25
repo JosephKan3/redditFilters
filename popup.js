@@ -298,11 +298,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (button) {
     button.addEventListener("click", function () {
-      const requireConfirm = document.getElementById("nukeConfirm").checked;
-      if (requireConfirm && !confirm("Are you sure? This will add the author and commentors to your block list.")) {
-        return;
-      }
-      nuke();
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        const url = tabs[0].url;
+        if (!url || !url.includes("/comments/")) {
+          document.getElementById("nukeDescription").innerHTML =
+            "Can only nuke when window is on a reddit thread";
+          return;
+        }
+        const requireConfirm = document.getElementById("nukeConfirm").checked;
+        if (requireConfirm && !confirm("Are you sure? This will add the author and commentors to your block list.")) {
+          return;
+        }
+        nuke();
+      });
     });
   }
 

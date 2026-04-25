@@ -52,10 +52,9 @@ function banPosts(subreddits, keywords, users, domains) {
         }
 
         // Ban keywords
-        lowerTitle = title.toLowerCase();
         if (blockKeywords) {
           for (let banWord of keywords) {
-            if (lowerTitle.includes(banWord)) {
+            if (matchesKeyword(title, banWord)) {
               if (loggingEnabled)
                 console.log(
                   `Hiding post based on keyword: ${banWord}: ${title}`
@@ -113,10 +112,9 @@ function banPosts(subreddits, keywords, users, domains) {
       }
 
       // Ban keywords
-      lowerTitle = title.toLowerCase();
       if (blockKeywords) {
         for (let banWord of keywords) {
-          if (lowerTitle.includes(banWord)) {
+          if (matchesKeyword(title, banWord)) {
             if (loggingEnabled)
               console.log(`Hiding post based on keyword: ${banWord}: ${title}`);
             hideEl(post);
@@ -304,6 +302,14 @@ let keyword_bans = new Set();
 let domain_bans = new Set();
 let loggingEnabled = false;
 let expandImages = false;
+const matchesKeyword = (text, keyword) => {
+  if (/[a-zA-Z]/.test(keyword)) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('\\b' + escaped + '\\b', 'i').test(text);
+  }
+  return text.includes(keyword);
+};
+
 let blockUsers = false;
 let blockKeywords = false;
 let blockSubreddits = false;
