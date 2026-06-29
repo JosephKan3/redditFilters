@@ -498,6 +498,15 @@ function addBlockButtons() {
         display: inline-flex !important;
         align-items: center !important;
         margin-left: 6px !important;
+        position: relative !important;
+        z-index: 2147483647 !important;
+        pointer-events: auto !important;
+      }
+      .reddit-filters-block-wrapper--article {
+        position: absolute !important;
+        top: 8px !important;
+        left: 8px !important;
+        margin-left: 0 !important;
       }
       .reddit-filters-block-btn {
         background: #d93a00 !important;
@@ -510,6 +519,16 @@ function addBlockButtons() {
         cursor: pointer !important;
         line-height: 1.2 !important;
         min-height: 16px !important;
+        position: relative !important;
+        z-index: 2147483647 !important;
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+      }
+      .reddit-filters-block-btn:hover,
+      .reddit-filters-block-btn:focus-visible {
+        background: #ff5c1a !important;
+        box-shadow: 0 0 0 2px rgba(255, 92, 26, 0.35) !important;
+        transform: scale(1.08) !important;
       }
     `;
     document.head.appendChild(style);
@@ -524,25 +543,42 @@ function addBlockButtons() {
     
     const faceplate = post.querySelector("faceplate-hovercard");
     const srLink = faceplate ? faceplate.querySelector('a[href^="/r/"]') : null;
+    const creditBar = post.querySelector('[slot="credit-bar"]');
+    const postTime = creditBar ? creditBar.querySelector('faceplate-timeago, time') : null;
     
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = "×";
     btn.className = "reddit-filters-block-btn";
     btn.title = `Block r/${subredditName}`;
-    
-    if (srLink && srLink.parentElement) {
-      const wrapper = document.createElement("span");
-      wrapper.className = "reddit-filters-block-wrapper";
-      wrapper.appendChild(btn);
+     
+    const wrapper = document.createElement("span");
+    wrapper.className = "reddit-filters-block-wrapper";
+    wrapper.appendChild(btn);
+
+    const article = post.parentElement && post.parentElement.tagName === "ARTICLE" ? post.parentElement : null;
+    if (postTime && postTime.parentElement) {
+      postTime.parentElement.insertBefore(wrapper, postTime.nextSibling);
+    } else if (srLink && srLink.parentElement) {
       srLink.parentElement.insertBefore(wrapper, srLink.nextSibling);
+    } else if (article) {
+      if (window.getComputedStyle(article).position === "static") {
+        article.style.position = "relative";
+      }
+      wrapper.classList.add("reddit-filters-block-wrapper--article");
+      article.insertBefore(wrapper, post);
     } else {
-       post.insertBefore(btn, post.firstChild);
+       post.insertBefore(wrapper, post.firstChild);
      }
 
-     btn.onclick = (e) => {
+     const swallowRedditPostClick = (e) => {
        e.preventDefault();
        e.stopPropagation();
+       e.stopImmediatePropagation();
+     };
+
+     const blockSubredditFromButton = (e) => {
+       swallowRedditPostClick(e);
        chrome.storage.local.get(["hiddenSubreddits"], (res) => {
          const current = new Set();
          if (res.hiddenSubreddits) {
@@ -553,8 +589,24 @@ function addBlockButtons() {
        });
        hidePostWithHrs(post);
         cleanupHrs();
-     };
-    
+      };
+
+     ["pointerdown", "mousedown", "mouseup", "click", "auxclick", "dblclick"].forEach((eventName) => {
+       btn.addEventListener(eventName, (e) => {
+         if (eventName === "click") {
+           blockSubredditFromButton(e);
+         } else {
+           swallowRedditPostClick(e);
+         }
+       }, true);
+     });
+
+     btn.addEventListener("keydown", (e) => {
+       if (e.key === "Enter" || e.key === " ") {
+         blockSubredditFromButton(e);
+       }
+     }, true);
+     
     post.dataset.blockBtnAdded = "true";
   });
 }
