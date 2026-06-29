@@ -257,6 +257,7 @@ function getSavedOptions(callback) {
       "loggingEnabled",
       "expandImages",
       "showBlockButtons",
+      "requireBlockConfirm",
       "blockUsers",
       "blockKeywords",
       "blockSubreddits",
@@ -315,6 +316,9 @@ function getSavedOptions(callback) {
       if (result.showBlockButtons !== undefined) {
         showBlockButtons = result.showBlockButtons;
       }
+      if (result.requireBlockConfirm !== undefined) {
+        requireBlockConfirm = result.requireBlockConfirm;
+      }
       if (result.blockUsers !== undefined) {
         blockUsers = result.blockUsers;
       }
@@ -362,6 +366,7 @@ let blockKeywords = false;
 let blockSubreddits = false;
 let blockDomains = false;
 let showBlockButtons = true;
+let requireBlockConfirm = false;
 const bypassedSubreddits = new Set();
 
 const hidePostWithHrs = (p) => {
@@ -530,6 +535,49 @@ function addBlockButtons() {
         box-shadow: 0 0 0 2px rgba(255, 92, 26, 0.35) !important;
         transform: scale(1.08) !important;
       }
+      .reddit-filters-confirm-popover {
+        position: absolute !important;
+        z-index: 2147483647 !important;
+        background: #1a1a1b !important;
+        color: white !important;
+        border: 1px solid #555 !important;
+        border-radius: 6px !important;
+        padding: 8px !important;
+        font-size: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+        min-width: 220px !important;
+      }
+      .reddit-filters-confirm-actions {
+        display: flex !important;
+        gap: 6px !important;
+        justify-content: flex-end !important;
+        margin-top: 8px !important;
+      }
+      .reddit-filters-confirm-actions button {
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 3px 8px !important;
+        cursor: pointer !important;
+        font-size: 12px !important;
+      }
+      .reddit-filters-confirm-yes {
+        background: #d93a00 !important;
+        color: white !important;
+      }
+      .reddit-filters-confirm-yes:hover,
+      .reddit-filters-confirm-yes:focus-visible {
+        background: #ff5c1a !important;
+        box-shadow: 0 0 0 2px rgba(255, 92, 26, 0.35) !important;
+      }
+      .reddit-filters-confirm-no {
+        background: #555 !important;
+        color: white !important;
+      }
+      .reddit-filters-confirm-no:hover,
+      .reddit-filters-confirm-no:focus-visible {
+        background: #777 !important;
+        box-shadow: 0 0 0 2px rgba(180, 180, 180, 0.35) !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -577,8 +625,7 @@ function addBlockButtons() {
        e.stopImmediatePropagation();
      };
 
-     const blockSubredditFromButton = (e) => {
-       swallowRedditPostClick(e);
+     const blockSubreddit = () => {
        chrome.storage.local.get(["hiddenSubreddits"], (res) => {
          const current = new Set();
          if (res.hiddenSubreddits) {
@@ -589,6 +636,51 @@ function addBlockButtons() {
        });
        hidePostWithHrs(post);
         cleanupHrs();
+      };
+
+     const showBlockConfirmation = () => {
+       document.querySelectorAll(".reddit-filters-confirm-popover").forEach((el) => el.remove());
+
+       const popover = document.createElement("div");
+       popover.className = "reddit-filters-confirm-popover";
+       popover.innerHTML = `
+         <div>Are you sure you want to block r/${subredditName}?</div>
+         <div class="reddit-filters-confirm-actions">
+           <button type="button" class="reddit-filters-confirm-no">No</button>
+           <button type="button" class="reddit-filters-confirm-yes">Yes</button>
+         </div>
+       `;
+
+       wrapper.appendChild(popover);
+
+       const keepConfirmationClickLocal = (confirmEvent) => {
+         confirmEvent.preventDefault();
+         confirmEvent.stopPropagation();
+       };
+
+       popover.addEventListener("pointerdown", keepConfirmationClickLocal, true);
+       popover.addEventListener("mousedown", keepConfirmationClickLocal, true);
+       popover.addEventListener("click", keepConfirmationClickLocal);
+
+       popover.querySelector(".reddit-filters-confirm-yes").addEventListener("click", (confirmEvent) => {
+         swallowRedditPostClick(confirmEvent);
+         popover.remove();
+         blockSubreddit();
+       });
+
+       popover.querySelector(".reddit-filters-confirm-no").addEventListener("click", (confirmEvent) => {
+         swallowRedditPostClick(confirmEvent);
+         popover.remove();
+       });
+      };
+
+     const blockSubredditFromButton = (e) => {
+       swallowRedditPostClick(e);
+       if (requireBlockConfirm) {
+         showBlockConfirmation();
+         return;
+       }
+       blockSubreddit();
       };
 
      ["pointerdown", "mousedown", "mouseup", "click", "auxclick", "dblclick"].forEach((eventName) => {
@@ -732,6 +824,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.showBlockButtons) {
     showBlockButtons = changes.showBlockButtons.newValue;
     addBlockButtons();
+  }
+  if (area === 'local' && changes.requireBlockConfirm) {
+    requireBlockConfirm = changes.requireBlockConfirm.newValue;
   }
 });
 

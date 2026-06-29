@@ -27,6 +27,7 @@ function saveData() {
   const blockSubreddits = document.getElementById("blockSubreddits").checked;
   const blockDomains = document.getElementById("blockDomains").checked;
   const nukeConfirm = document.getElementById("nukeConfirm").checked;
+  const requireBlockConfirm = document.getElementById("requireBlockConfirm").checked;
 
   // Save the data using the Chrome storage API
   chrome.storage.local.set({
@@ -42,6 +43,7 @@ function saveData() {
     blockSubreddits: blockSubreddits,
     blockDomains: blockDomains,
     nukeConfirm: nukeConfirm,
+    requireBlockConfirm: requireBlockConfirm,
   });
 }
 
@@ -61,6 +63,7 @@ function loadData() {
       "blockSubreddits",
       "blockDomains",
       "nukeConfirm",
+      "requireBlockConfirm",
     ],
     function (result) {
       if (result.hiddenUsers) {
@@ -111,6 +114,11 @@ function loadData() {
       }
       if (result.nukeConfirm !== undefined) {
         document.getElementById("nukeConfirm").checked = result.nukeConfirm;
+      }
+      if (result.requireBlockConfirm !== undefined) {
+        document.getElementById("requireBlockConfirm").checked = result.requireBlockConfirm;
+      } else {
+        document.getElementById("requireBlockConfirm").checked = false;
       }
 
       // Load saved section order
@@ -190,7 +198,7 @@ document.getElementById("subredditList").addEventListener("input", saveData);
 document.getElementById("domainList").addEventListener("input", saveData);
 
 // Toggle change listeners - save and notify content scripts immediately
-const toggleIds = ["loggingEnabled", "expandImages", "showBlockButtons", "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains", "nukeConfirm"];
+const toggleIds = ["loggingEnabled", "expandImages", "showBlockButtons", "requireBlockConfirm", "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains", "nukeConfirm"];
 toggleIds.forEach((id) => {
   document.getElementById(id).addEventListener("change", () => {
     saveData();
@@ -364,6 +372,7 @@ function exportData() {
       blockSubreddits: document.getElementById("blockSubreddits").checked,
       blockDomains: document.getElementById("blockDomains").checked,
       nukeConfirm: document.getElementById("nukeConfirm").checked,
+      requireBlockConfirm: document.getElementById("requireBlockConfirm").checked,
     })
   );
 
@@ -401,6 +410,7 @@ function importData(file) {
         blockSubreddits: null,
         blockDomains: null,
         nukeConfirm: null,
+        requireBlockConfirm: null,
       };
 
       const validCategories = new Set([
@@ -444,6 +454,7 @@ function importData(file) {
             if (parsed.blockSubreddits !== undefined) data.blockSubreddits = parsed.blockSubreddits;
             if (parsed.blockDomains !== undefined) data.blockDomains = parsed.blockDomains;
             if (parsed.nukeConfirm !== undefined) data.nukeConfirm = parsed.nukeConfirm;
+            if (parsed.requireBlockConfirm !== undefined) data.requireBlockConfirm = parsed.requireBlockConfirm;
           } else if (parsed.items && Array.isArray(parsed.items)) {
             const mapped = keyMap[parsed.category];
             if (mapped && parsed.items.every((item) => typeof item === "string")) {
@@ -484,6 +495,9 @@ function importData(file) {
       }
       if (data.nukeConfirm !== null) {
         document.getElementById("nukeConfirm").checked = data.nukeConfirm;
+      }
+      if (data.requireBlockConfirm !== null) {
+        document.getElementById("requireBlockConfirm").checked = data.requireBlockConfirm;
       }
 
       // Show success message
