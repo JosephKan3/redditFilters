@@ -20,7 +20,6 @@ function saveData() {
 
   // Fetch preferences from input
   const loggingEnabled = document.getElementById("loggingEnabled").checked;
-  const expandImages = document.getElementById("expandImages").checked;
   const showBlockButtons = document.getElementById("showBlockButtons").checked;
   const blockUsers = document.getElementById("blockUsers").checked;
   const blockKeywords = document.getElementById("blockKeywords").checked;
@@ -36,7 +35,6 @@ function saveData() {
     hiddenSubreddits: subredditsArray,
     hiddenDomains: domainsArray,
     loggingEnabled: loggingEnabled,
-    expandImages: expandImages,
     showBlockButtons: showBlockButtons,
     blockUsers: blockUsers,
     blockKeywords: blockKeywords,
@@ -45,6 +43,15 @@ function saveData() {
     nukeConfirm: nukeConfirm,
     requireBlockConfirm: requireBlockConfirm,
   });
+}
+
+function updateRequireBlockConfirmState() {
+  const showBlockButtons = document.getElementById("showBlockButtons").checked;
+  const requireBlockConfirm = document.getElementById("requireBlockConfirm");
+  const requireBlockConfirmToggle = document.getElementById("requireBlockConfirmToggle");
+
+  requireBlockConfirm.disabled = !showBlockButtons;
+  requireBlockConfirmToggle.classList.toggle("disabledToggle", !showBlockButtons);
 }
 
 function loadData() {
@@ -56,7 +63,6 @@ function loadData() {
       "hiddenSubreddits",
       "hiddenDomains",
       "loggingEnabled",
-      "expandImages",
       "showBlockButtons",
       "blockUsers",
       "blockKeywords",
@@ -91,9 +97,6 @@ function loadData() {
         document.getElementById("loggingEnabled").checked =
           result.loggingEnabled;
       }
-      if (result.expandImages !== undefined) {
-        document.getElementById("expandImages").checked = result.expandImages;
-      }
       if (result.showBlockButtons !== undefined) {
         document.getElementById("showBlockButtons").checked = result.showBlockButtons;
       } else {
@@ -118,8 +121,10 @@ function loadData() {
       if (result.requireBlockConfirm !== undefined) {
         document.getElementById("requireBlockConfirm").checked = result.requireBlockConfirm;
       } else {
-        document.getElementById("requireBlockConfirm").checked = false;
+        document.getElementById("requireBlockConfirm").checked = true;
       }
+
+      updateRequireBlockConfirmState();
 
       // Load saved section order
       loadSectionOrder();
@@ -198,12 +203,13 @@ document.getElementById("subredditList").addEventListener("input", saveData);
 document.getElementById("domainList").addEventListener("input", saveData);
 
 // Toggle change listeners - save and notify content scripts immediately
-const toggleIds = ["loggingEnabled", "expandImages", "showBlockButtons", "requireBlockConfirm", "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains", "nukeConfirm"];
+const toggleIds = ["loggingEnabled", "showBlockButtons", "requireBlockConfirm", "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains", "nukeConfirm"];
 toggleIds.forEach((id) => {
   document.getElementById(id).addEventListener("change", () => {
     saveData();
     if (id === "showBlockButtons") {
       const val = document.getElementById(id).checked;
+      updateRequireBlockConfirmState();
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         tabs.forEach((tab) => {
           chrome.tabs.sendMessage(tab.id, { action: "toggleBlockButtons", value: val }).catch(() => {});

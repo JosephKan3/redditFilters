@@ -1,30 +1,6 @@
 // Handles the two website designs
 const oldReddit = window.location.hostname === "old.reddit.com";
 
-function showImages() {
-  if (!expandImages) return;
-  // Handle old reddit design
-  if (oldReddit) {
-    const links = document.querySelectorAll("a");
-
-    links.forEach((link) => {
-      const href = link.href;
-
-      // Check if the href points to an image (basic check)
-      if (link.textContent.trim() === "<image>") {
-        const img = document.createElement("img");
-        img.src = href;
-        img.style.maxWidth = "100%"; // Optional: to ensure large images don't overflow
-
-        // Replace the link with the image
-        link.parentNode.replaceChild(img, link);
-      }
-    });
-    // New reddit design automatically fully displays
-  } else {
-  }
-}
-
 function banPosts(subreddits, keywords, users, domains) {
   // Do not ban posts of a dedicated thread page
   if (window.location.pathname.includes("/comments/")) return;
@@ -255,7 +231,6 @@ function getSavedOptions(callback) {
       "hiddenSubreddits",
       "hiddenDomains",
       "loggingEnabled",
-      "expandImages",
       "showBlockButtons",
       "requireBlockConfirm",
       "blockUsers",
@@ -310,9 +285,6 @@ function getSavedOptions(callback) {
       if (result.loggingEnabled !== undefined) {
         loggingEnabled = result.loggingEnabled;
       }
-      if (result.expandImages !== undefined) {
-        expandImages = result.expandImages;
-      }
       if (result.showBlockButtons !== undefined) {
         showBlockButtons = result.showBlockButtons;
       }
@@ -342,7 +314,6 @@ let subreddit_bans = new Set();
 let keyword_bans = new Set();
 let domain_bans = new Set();
 let loggingEnabled = false;
-let expandImages = false;
 const matchesKeyword = (text, keyword) => {
   if (/[a-zA-Z]/.test(keyword)) {
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -366,7 +337,7 @@ let blockKeywords = false;
 let blockSubreddits = false;
 let blockDomains = false;
 let showBlockButtons = true;
-let requireBlockConfirm = false;
+let requireBlockConfirm = true;
 const bypassedSubreddits = new Set();
 
 const hidePostWithHrs = (p) => {
@@ -708,7 +679,6 @@ function observeDOMChanges() {
      getSavedOptions(() => {
           banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);
           banComments(user_bans);
-          showImages();
           addBlockButtons();
           cleanupHrs();
           showBlockedSubredditBanner(subreddit_bans);
@@ -832,7 +802,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 // Start observing and hide existing elements
 getSavedOptions(() => {
-  showImages();
   addBlockButtons();
   banComments(user_bans);
   banPosts(subreddit_bans, keyword_bans, user_bans, domain_bans);

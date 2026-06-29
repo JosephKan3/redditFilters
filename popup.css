@@ -320,6 +320,19 @@ input:checked + .slider.small:before {
   align-items: center;
 }
 
+.smallToggle.childToggle {
+  margin-left: 1.5rem;
+}
+
+.smallToggle.disabledToggle {
+  opacity: 0.45;
+}
+
+.smallToggle.disabledToggle h3,
+.smallToggle.disabledToggle .slider {
+  cursor: not-allowed;
+}
+
 .actionButton {
   padding: 6px 16px;
   border: none;
