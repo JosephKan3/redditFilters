@@ -60,7 +60,7 @@ function banPosts(subreddits, keywords, users, domains) {
         }
 
         // Ban users
-        if (blockUsers && users.has(author)) {
+        if (blockUsers && users.has(normalizeUserName(author))) {
           if (loggingEnabled)
             console.log(`Hiding post based on user: ${author}: ${title}`);
           post.style.display = "none";
@@ -137,7 +137,7 @@ function banPosts(subreddits, keywords, users, domains) {
       }
 
       // Ban users
-      if (blockUsers && users.has(author)) {
+      if (blockUsers && users.has(normalizeUserName(author))) {
         if (loggingEnabled)
           console.log(`Hiding post based on user: ${author}: ${title}`);
         hideEl(post);
@@ -195,7 +195,7 @@ function banComments(users = []) {
 
     visibleComments.forEach((comment) => {
       const author = comment.getAttribute("data-author");
-      if (author && users.has(author)) {
+      if (author && users.has(normalizeUserName(author))) {
         // Ban users
         if (loggingEnabled)
           console.log(`Hiding comment based on user: ${author}`);
@@ -212,7 +212,7 @@ function banComments(users = []) {
 
     visibleComments.forEach((comment) => {
       const author = comment.getAttribute("author");
-      if (author && users.has(author)) {
+      if (author && users.has(normalizeUserName(author))) {
         // Ban users
         if (loggingEnabled)
           console.log(`Hiding comment based on user: ${author}`);
@@ -241,14 +241,8 @@ function getSavedOptions(callback) {
     function (result) {
       if (result.hiddenUsers) {
         for (user of result.hiddenUsers) {
-          // Slices off u/ in case the user included it
-          let cleanedUser = user;
-          if (cleanedUser.length >= 2) {
-            if (user.substring(0, 2) == "r/") {
-              cleanedUser == user.slice(2);
-            }
-          }
-          user_bans.add(cleanedUser);
+          const cleanedUser = normalizeUserName(user);
+          if (cleanedUser) user_bans.add(cleanedUser);
         }
       }
 
@@ -262,14 +256,8 @@ function getSavedOptions(callback) {
 
       if (result.hiddenSubreddits) {
         for (subreddit of result.hiddenSubreddits) {
-          // Slices off r/ in case the user included it
-          let cleanedSubreddit = subreddit;
-          if (subreddit.length >= 2) {
-            if (subreddit.substring(0, 2) == "r/") {
-              cleanedSubreddit == subreddit.slice(2);
-            }
-          }
-          subreddit_bans.add(cleanedSubreddit.toLowerCase());
+          const cleanedSubreddit = normalizeSubredditName(subreddit);
+          if (cleanedSubreddit) subreddit_bans.add(cleanedSubreddit);
         }
       }
 
@@ -314,6 +302,19 @@ let subreddit_bans = new Set();
 let keyword_bans = new Set();
 let domain_bans = new Set();
 let loggingEnabled = false;
+
+const normalizeRedditName = (value, prefix) => {
+  if (!value) return "";
+  let cleaned = String(value).trim();
+  if (cleaned.toLowerCase().startsWith(prefix)) {
+    cleaned = cleaned.slice(prefix.length);
+  }
+  return cleaned.trim().toLowerCase();
+};
+
+const normalizeUserName = (value) => normalizeRedditName(value, "u/");
+const normalizeSubredditName = (value) => normalizeRedditName(value, "r/");
+
 const matchesKeyword = (text, keyword) => {
   if (/[a-zA-Z]/.test(keyword)) {
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -346,6 +347,52 @@ const hidePostWithHrs = (p) => {
     target = p.parentElement;
   }
   target.style.display = "none";
+};
+
+const getPostArticle = (post) => {
+  if (!post) return null;
+  return post.closest("article") || (post.parentElement && post.parentElement.tagName === "ARTICLE" ? post.parentElement : null);
+};
+
+const getPostSubredditName = (post) => {
+  if (!post) return "";
+  const subreddit = post.getAttribute("subreddit-prefixed-name") || post.getAttribute("subreddit") || "";
+  return normalizeSubredditName(subreddit);
+};
+
+const getPostCreditBar = (post) => post ? post.querySelector('[slot="credit-bar"]') : null;
+
+const getPostSubredditLink = (post) => {
+  if (!post) return null;
+  const creditBar = getPostCreditBar(post);
+  return (
+    (creditBar && creditBar.querySelector('a[data-testid="subreddit-name"], faceplate-hovercard a[href^="/r/"]')) ||
+    post.querySelector('a[data-testid="subreddit-name"], faceplate-hovercard a[href^="/r/"], a[href^="/r/"]')
+  );
+};
+
+const getPostTimeElement = (post) => {
+  const creditBar = getPostCreditBar(post);
+  return creditBar ? creditBar.querySelector('faceplate-timeago, time') : null;
+};
+
+const getBlockButtonAnchor = (post) => {
+  const postTime = getPostTimeElement(post);
+  if (postTime && postTime.parentElement) {
+    return { parent: postTime.parentElement, before: postTime.nextSibling, mode: "inline" };
+  }
+
+  const srLink = getPostSubredditLink(post);
+  if (srLink && srLink.parentElement) {
+    return { parent: srLink.parentElement, before: srLink.nextSibling, mode: "inline" };
+  }
+
+  const article = getPostArticle(post);
+  if (article) {
+    return { parent: article, before: post, mode: "article" };
+  }
+
+  return { parent: post, before: post ? post.firstChild : null, mode: "fallback" };
 };
 
 const showBlockedSubredditBanner = (blockedSet) => {
@@ -556,14 +603,8 @@ function addBlockButtons() {
   const posts = document.querySelectorAll("shreddit-post");
   posts.forEach((post) => {
     if (post.dataset.blockBtnAdded) return;
-    const subreddit = post.getAttribute("subreddit-prefixed-name");
-    if (!subreddit) return;
-    const subredditName = subreddit.slice(2);
-    
-    const faceplate = post.querySelector("faceplate-hovercard");
-    const srLink = faceplate ? faceplate.querySelector('a[href^="/r/"]') : null;
-    const creditBar = post.querySelector('[slot="credit-bar"]');
-    const postTime = creditBar ? creditBar.querySelector('faceplate-timeago, time') : null;
+    const subredditName = getPostSubredditName(post);
+    if (!subredditName) return;
     
     const btn = document.createElement("button");
     btn.type = "button";
@@ -575,20 +616,16 @@ function addBlockButtons() {
     wrapper.className = "reddit-filters-block-wrapper";
     wrapper.appendChild(btn);
 
-    const article = post.parentElement && post.parentElement.tagName === "ARTICLE" ? post.parentElement : null;
-    if (postTime && postTime.parentElement) {
-      postTime.parentElement.insertBefore(wrapper, postTime.nextSibling);
-    } else if (srLink && srLink.parentElement) {
-      srLink.parentElement.insertBefore(wrapper, srLink.nextSibling);
-    } else if (article) {
+    const anchor = getBlockButtonAnchor(post);
+    if (!anchor.parent) return;
+    if (anchor.mode === "article") {
+      const article = anchor.parent;
       if (window.getComputedStyle(article).position === "static") {
         article.style.position = "relative";
       }
       wrapper.classList.add("reddit-filters-block-wrapper--article");
-      article.insertBefore(wrapper, post);
-    } else {
-       post.insertBefore(wrapper, post.firstChild);
-     }
+    }
+    anchor.parent.insertBefore(wrapper, anchor.before);
 
      const swallowRedditPostClick = (e) => {
        e.preventDefault();
@@ -744,7 +781,7 @@ function handleNukeRequest(request, sender, sendResponse) {
           (accumulatedBans, comment) => {
             const author = comment.getAttribute("data-author");
             // Only ban users that aren't already banned
-            if (author && !user_bans.has(author)) {
+            if (author && !user_bans.has(normalizeUserName(author))) {
               accumulatedBans.push(author);
             }
             return accumulatedBans;
@@ -763,7 +800,7 @@ function handleNukeRequest(request, sender, sendResponse) {
           (accumulatedBans, comment) => {
             const author = comment.getAttribute("author");
             // Only ban users that aren't already banned
-            if (author && !user_bans.has(author)) {
+            if (author && !user_bans.has(normalizeUserName(author))) {
               accumulatedBans.push(author);
             }
             return accumulatedBans;
