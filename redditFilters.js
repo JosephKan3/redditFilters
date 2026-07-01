@@ -1,9 +1,25 @@
 // Handles the two website designs
 const oldReddit = window.location.hostname === "old.reddit.com";
 
+function hideAds() {
+  if (!blockAds) return;
+  if (oldReddit) {
+    // Old reddit marks promoted posts with the "promotedlink" class
+    document.querySelectorAll(".thing.promotedlink").forEach((ad) => {
+      ad.style.display = "none";
+    });
+  } else {
+    // New reddit renders ads as a dedicated custom element, separate from shreddit-post
+    document.querySelectorAll("shreddit-ad-post").forEach((ad) => {
+      ad.style.display = "none";
+    });
+  }
+}
+
 function banPosts(subreddits, keywords, users, domains) {
   // Do not ban posts of a dedicated thread page
   if (window.location.pathname.includes("/comments/")) return;
+  hideAds();
   // Handle old reddit design
   if (oldReddit) {
     const posts = document.querySelectorAll(".thing:not(.promotedlink)");
@@ -237,6 +253,7 @@ function getSavedOptions(callback) {
       "blockKeywords",
       "blockSubreddits",
       "blockDomains",
+      "blockAds",
     ],
     function (result) {
       if (result.hiddenUsers) {
@@ -291,6 +308,9 @@ function getSavedOptions(callback) {
       if (result.blockDomains !== undefined) {
         blockDomains = result.blockDomains;
       }
+      if (result.blockAds !== undefined) {
+        blockAds = result.blockAds;
+      }
       if (callback) callback();
     }
   );
@@ -337,6 +357,7 @@ let blockUsers = false;
 let blockKeywords = false;
 let blockSubreddits = false;
 let blockDomains = false;
+let blockAds = true;
 let showBlockButtons = true;
 let requireBlockConfirm = true;
 const bypassedSubreddits = new Set();
@@ -817,7 +838,7 @@ function handleNukeRequest(request, sender, sendResponse) {
 
 // Listen for nuke request and block button toggle
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "nuke") {
+  if (message.action === "nukePage") {
     handleNukeRequest(message, sender, sendResponse);
   } else if (message.action === "toggleBlockButtons") {
     showBlockButtons = message.value;

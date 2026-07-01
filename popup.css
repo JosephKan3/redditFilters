@@ -318,10 +318,15 @@ input:checked + .slider.small:before {
 .smallToggle {
   display: flex;
   align-items: center;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .smallToggle.childToggle {
-  margin-left: 1.5rem;
+  margin-left: 1.25rem;
+  margin-top: 0.25rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(0, 0, 0, 0.25);
 }
 
 .smallToggle.disabledToggle {
