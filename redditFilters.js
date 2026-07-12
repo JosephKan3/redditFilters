@@ -542,8 +542,6 @@ function addBlockButtons() {
         display: inline-flex !important;
         align-items: center !important;
         margin-left: 6px !important;
-        position: relative !important;
-        z-index: 2147483647 !important;
         pointer-events: auto !important;
       }
       .reddit-filters-block-wrapper--article {
@@ -563,8 +561,6 @@ function addBlockButtons() {
         cursor: pointer !important;
         line-height: 1.2 !important;
         min-height: 16px !important;
-        position: relative !important;
-        z-index: 2147483647 !important;
         pointer-events: auto !important;
         touch-action: manipulation !important;
       }
