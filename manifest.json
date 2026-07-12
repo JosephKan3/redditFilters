@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Advanced Reddit Filters",
-  "version": "1.4",
+  "version": "1.5",
   "description": "Nuke threads and filter posts by keyword, user, domain, subreddit, and ads. Poof! \n\n Works on both Reddit and Old Reddit! \n\n",
   "permissions": ["activeTab", "storage"],
   "content_scripts": [

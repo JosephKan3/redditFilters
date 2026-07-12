@@ -9,17 +9,21 @@ function hideAds() {
       ad.style.display = "none";
     });
   } else {
-    // New reddit renders ads as a dedicated custom element, separate from shreddit-post
+    // New reddit renders feed ads as a dedicated custom element, separate from shreddit-post
     document.querySelectorAll("shreddit-ad-post").forEach((ad) => {
+      ad.style.display = "none";
+    });
+    // Comment-thread pages render ads via a separate element pair
+    document.querySelectorAll("shreddit-comment-tree-ad, shreddit-comments-page-ad").forEach((ad) => {
       ad.style.display = "none";
     });
   }
 }
 
 function banPosts(subreddits, keywords, users, domains) {
+  hideAds();
   // Do not ban posts of a dedicated thread page
   if (window.location.pathname.includes("/comments/")) return;
-  hideAds();
   // Handle old reddit design
   if (oldReddit) {
     const posts = document.querySelectorAll(".thing:not(.promotedlink)");
