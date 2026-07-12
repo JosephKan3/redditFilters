@@ -201,7 +201,7 @@ function banComments(users = []) {
   if (!window.location.pathname.includes("/comments/")) return;
   if (!blockUsers) return;
 
-  if (oldReddit) {x
+  if (oldReddit) {
     const comments = document
       .querySelector(".commentarea")
       .querySelectorAll(".thing:not(.morechildren,.deleted)");
