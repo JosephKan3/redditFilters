@@ -201,7 +201,7 @@ function banComments(users = []) {
   if (!window.location.pathname.includes("/comments/")) return;
   if (!blockUsers) return;
 
-  if (oldReddit) {
+  if (oldReddit) {x
     const comments = document
       .querySelector(".commentarea")
       .querySelectorAll(".thing:not(.morechildren,.deleted)");
@@ -556,7 +556,7 @@ function addBlockButtons() {
         background: #d93a00 !important;
         color: white !important;
         border: none !important;
-        border-radius: 4px !important;
+        border-radius: 50% !important;
         padding: 0px 4px !important;
         font-size: 11px !important;
         font-weight: bold !important;
@@ -567,6 +567,7 @@ function addBlockButtons() {
         z-index: 2147483647 !important;
         pointer-events: auto !important;
         touch-action: manipulation !important;
+        height: 1em !important;
       }
       .reddit-filters-block-btn:hover,
       .reddit-filters-block-btn:focus-visible {
