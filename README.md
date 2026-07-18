@@ -2,6 +2,8 @@
 
 Advanced Reddit Filters is a Chrome extension that enhances your browsing experience on Reddit by allowing you to block specific users, keywords, subreddits, and websites.
 
+If you find this extension useful, consider [sponsoring the project](https://github.com/sponsors/JosephKan3?frequency=one-time&sponsor=JosephKan3).
+
 ## Features
 
 - **User Blocking:** Hide posts and comments from specific users.
