@@ -20,10 +20,60 @@ function hideAds() {
   }
 }
 
+function filterSearchResults(subreddits, keywords) {
+  // Search results render as <search-telemetry-tracker> wrappers around each post card,
+  // distinct from the <shreddit-post> elements used on feed/listing pages.
+  const results = document.querySelectorAll('search-telemetry-tracker[view-events="search/view/post"]');
+  results.forEach((result) => {
+    const titleLink = result.querySelector('a[data-testid="post-title"]');
+    if (!titleLink) return;
+    const srMatch = (titleLink.getAttribute("href") || "").match(/^\/r\/([^/]+)/);
+    if (!srMatch) return;
+    const subreddit = srMatch[1].toLowerCase();
+    const title = titleLink.getAttribute("aria-label") || "";
+
+    // Always show bypassed subreddit results, skip all other filters
+    if (bypassedSubreddits.has(subreddit)) {
+      result.style.display = "";
+      return;
+    }
+
+    if (window.getComputedStyle(result).display === "none") return; // Already hidden
+
+    // Ban subreddits
+    if (blockSubreddits && subreddits.has(subreddit)) {
+      if (loggingEnabled)
+        console.log(`Hiding search result based on subreddit: ${subreddit}: ${title}`);
+      incrementStat("subreddits", subreddit);
+      result.style.display = "none";
+      return;
+    }
+
+    // Ban keywords
+    if (blockKeywords) {
+      for (let banWord of keywords) {
+        if (matchesKeyword(title, banWord)) {
+          if (loggingEnabled)
+            console.log(`Hiding search result based on keyword: ${banWord}: ${title}`);
+          incrementStat("keywords", banWord);
+          result.style.display = "none";
+          return;
+        }
+      }
+    }
+  });
+}
+
 function banPosts(subreddits, keywords, users, domains) {
   hideAds();
   // Do not ban posts of a dedicated thread page
   if (window.location.pathname.includes("/comments/")) return;
+
+  // Search results use a different markup entirely (no shreddit-post elements)
+  if (!oldReddit && window.location.pathname.startsWith("/search")) {
+    filterSearchResults(subreddits, keywords);
+    return;
+  }
   // Handle old reddit design
   if (oldReddit) {
     const posts = document.querySelectorAll(".thing:not(.promotedlink)");
