@@ -320,7 +320,12 @@ function getSavedOptions(callback) {
       if (result.hiddenKeywords) {
         for (keyword of result.hiddenKeywords) {
           if (keyword.trim() != "") {
-            keyword_bans.add(keyword.toLowerCase());
+            // Preserve original case for regex patterns; lowercase plain keywords
+            if (isRegexKeyword(keyword)) {
+              keyword_bans.add(keyword.trim());
+            } else {
+              keyword_bans.add(keyword.toLowerCase());
+            }
           }
         }
       }
@@ -389,7 +394,41 @@ const normalizeRedditName = (value, prefix) => {
 const normalizeUserName = (value) => normalizeRedditName(value, "u/");
 const normalizeSubredditName = (value) => normalizeRedditName(value, "r/");
 
+// Keywords wrapped in slashes (e.g. /covid|vaccine/i) are treated as regular
+// expressions. Everything else keeps the original plain-keyword behavior.
+const regexCache = new Map();
+
+const parseRegexKeyword = (keyword) => {
+  const match = /^\/(.+)\/([a-z]*)$/i.exec(keyword.trim());
+  if (!match) return null;
+  return { source: match[1], flags: match[2] };
+};
+
+const isRegexKeyword = (keyword) => parseRegexKeyword(keyword) !== null;
+
+const getCompiledRegex = (keyword) => {
+  if (regexCache.has(keyword)) return regexCache.get(keyword);
+  let compiled = null;
+  const parsed = parseRegexKeyword(keyword);
+  if (parsed) {
+    try {
+      compiled = new RegExp(parsed.source, parsed.flags);
+    } catch (e) {
+      // Invalid regex — ignore so a bad pattern can't break filtering
+      if (loggingEnabled) console.log(`Ignoring invalid regex keyword: ${keyword}`, e.message);
+      compiled = null;
+    }
+  }
+  regexCache.set(keyword, compiled);
+  return compiled;
+};
+
 const matchesKeyword = (text, keyword) => {
+  const rx = getCompiledRegex(keyword);
+  if (rx) {
+    rx.lastIndex = 0; // Reset in case the pattern uses the global flag
+    return rx.test(text);
+  }
   if (/[a-zA-Z]/.test(keyword)) {
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return new RegExp('\\b' + escaped + '\\b', 'i').test(text);
