@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Reddit Filters — Popup Preview</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #1b1e26;
+        --border: #2a2f3a;
+        --text: #e6e8ec;
+        --muted: #9aa2b1;
+        --dot-red: #ff5f57;
+        --dot-yellow: #febc2e;
+        --dot-green: #28c840;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background:
+          radial-gradient(1200px 600px at 50% -10%, #1a1d27 0%, var(--bg) 60%);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 32px 16px;
+        min-height: 100%;
+      }
+      .caption {
+        text-align: center;
+        max-width: 420px;
+      }
+      .caption h1 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      .caption p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      /* Mock browser/OS window frame */
+      .window {
+        width: 330px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 50px rgba(0, 0, 0, 0.55),
+          0 2px 6px rgba(0, 0, 0, 0.4);
+      }
+      .titlebar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        background: linear-gradient(#20242e, #1b1e26);
+        border-bottom: 1px solid var(--border);
+      }
+      .dots { display: flex; gap: 7px; }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot.red { background: var(--dot-red); }
+      .dot.yellow { background: var(--dot-yellow); }
+      .dot.green { background: var(--dot-green); }
+      .titlebar .title {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+        margin-right: 42px; /* balance the dots width for true centering */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .popup-frame {
+        display: block;
+        width: 330px;   /* 310px popup + 2x10px body padding */
+        height: 600px;
+        border: 0;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="caption">
+      <h1>Advanced Reddit Filters</h1>
+      <p>Live preview of the extension popup. State is saved to this browser
+        (via a mocked <code>chrome.storage</code>) so toggles and lists persist.</p>
+    </div>
+
+    <div class="window" role="img" aria-label="Extension popup window preview">
+      <div class="titlebar">
+        <div class="dots" aria-hidden="true">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div class="title">Advanced Reddit Filters</div>
+      </div>
+      <iframe
+        class="popup-frame"
+        src="./popup.html"
+        title="Advanced Reddit Filters popup"
+      ></iframe>
+    </div>
+  </body>
+</html>

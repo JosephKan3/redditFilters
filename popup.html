@@ -186,6 +186,8 @@ Wrap in slashes for regex (e.g. /covid|vaccine/i)"
       <button id="resetStatsBtn" class="actionButton resetStatsBtn">Reset All Stats</button>
     </div>
 
+    <!-- Preview-only: mocks chrome.* APIs in a normal browser; no-op in the real extension -->
+    <script src="chrome-preview-shim.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
