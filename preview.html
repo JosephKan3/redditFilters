@@ -14,7 +14,6 @@
         --dot-red: #ff5f57;
         --dot-yellow: #febc2e;
         --dot-green: #28c840;
-        --scale: 1.5;
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
@@ -48,8 +47,8 @@
         color: var(--muted);
       }
       /* Mock browser/OS window frame.
-         The popup is locked to the real extension popup size (310x600),
-         so we scale the whole window up to make it easier to view. */
+         Rendered 1:1 at the real extension popup size (310x600) so it stays
+         crisp and true-to-life rather than being magnified/zoomed. */
       .window {
         width: 330px;
         background: var(--panel);
@@ -59,10 +58,6 @@
         box-shadow:
           0 20px 50px rgba(0, 0, 0, 0.55),
           0 2px 6px rgba(0, 0, 0, 0.4);
-        transform: scale(var(--scale));
-        transform-origin: top center;
-        /* reserve layout space for the scaled-up window */
-        margin-bottom: calc((600px + 34px) * (var(--scale) - 1));
       }
       .titlebar {
         display: flex;
