@@ -1,0 +1,10 @@
+{
+  "name": "reddit-filters-preview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Preview harness for the Reddit Filters Chrome extension popup. Not part of the shipped extension.",
+  "scripts": {
+    "dev": "node preview-server.js",
+    "start": "node preview-server.js"
+  }
+}
