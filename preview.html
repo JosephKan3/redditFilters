@@ -51,7 +51,7 @@
          Rendered 1:1 at the real extension popup size (310x600) so it stays
          crisp and true-to-life rather than being magnified/zoomed. */
       .window {
-        width: 330px;
+        width: 520px;
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -89,8 +89,8 @@
       }
       .popup-frame {
         display: block;
-        width: 330px;   /* 310px popup + 2x10px body padding */
-        height: 600px;  /* starting height; auto-sized to content via script */
+        width: 520px;   /* wider preview; popup body is widened to match via script */
+        height: 640px;  /* capped height; popup scrolls internally */
         border: 0;
         background: #fff;
       }
@@ -121,31 +121,26 @@
     </div>
 
     <script>
-      // Grow the iframe to fit the full popup content so nothing is clipped;
-      // the outer page scrolls instead of the popup being cut off.
+      // Preview-only: widen the popup so the harness uses more width and less
+      // height. This injects CSS into the iframe and does NOT touch popup.css,
+      // so the real extension keeps its native 310px popup size in Chrome.
       (function () {
         const frame = document.querySelector(".popup-frame");
-        function fit() {
+        const POPUP_WIDTH = 500; // inner popup body width in the preview
+
+        frame.addEventListener("load", function () {
           try {
             const doc = frame.contentDocument;
-            if (!doc || !doc.body) return;
-            const h = Math.max(
-              doc.body.scrollHeight,
-              doc.documentElement.scrollHeight
-            );
-            if (h) frame.style.height = h + "px";
+            if (!doc || !doc.head) return;
+            const style = doc.createElement("style");
+            style.textContent = `
+              body { width: ${POPUP_WIDTH}px !important; height: auto !important; }
+              .inputList { width: 100% !important; box-sizing: border-box; }
+            `;
+            doc.head.appendChild(style);
           } catch (e) {
-            /* cross-origin safety net — leave the default height */
+            /* cross-origin safety net — leave the default popup sizing */
           }
-        }
-        frame.addEventListener("load", function () {
-          fit();
-          // Re-measure as fonts settle and when the popup content changes.
-          setTimeout(fit, 300);
-          try {
-            const ro = new ResizeObserver(fit);
-            ro.observe(frame.contentDocument.body);
-          } catch (e) {}
         });
       })();
     </script>
