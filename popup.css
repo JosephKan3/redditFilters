@@ -46,6 +46,16 @@ h3 {
   font-family: monospace;
 }
 
+.inputHint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.inputHint a {
+  color: #cc0052;
+}
+
 /* Draggable section styles */
 .draggableSection {
   margin-bottom: 4px;

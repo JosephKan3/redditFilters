@@ -394,14 +394,16 @@ const normalizeRedditName = (value, prefix) => {
 const normalizeUserName = (value) => normalizeRedditName(value, "u/");
 const normalizeSubredditName = (value) => normalizeRedditName(value, "r/");
 
-// Keywords wrapped in slashes (e.g. /covid|vaccine/i) are treated as regular
+// Keywords wrapped in slashes (e.g. /covid|vaccine/) are treated as regular
 // expressions. Everything else keeps the original plain-keyword behavior.
+// Regex matching is always case-insensitive to keep things simple for users.
 const regexCache = new Map();
 
 const parseRegexKeyword = (keyword) => {
-  const match = /^\/(.+)\/([a-z]*)$/i.exec(keyword.trim());
+  // Only the pattern between the slashes matters; trailing flags are ignored.
+  const match = /^\/(.+)\/[a-z]*$/i.exec(keyword.trim());
   if (!match) return null;
-  return { source: match[1], flags: match[2] };
+  return { source: match[1] };
 };
 
 const isRegexKeyword = (keyword) => parseRegexKeyword(keyword) !== null;
@@ -412,7 +414,8 @@ const getCompiledRegex = (keyword) => {
   const parsed = parseRegexKeyword(keyword);
   if (parsed) {
     try {
-      compiled = new RegExp(parsed.source, parsed.flags);
+      // Always case-insensitive.
+      compiled = new RegExp(parsed.source, 'i');
     } catch (e) {
       // Invalid regex — ignore so a bad pattern can't break filtering
       if (loggingEnabled) console.log(`Ignoring invalid regex keyword: ${keyword}`, e.message);
