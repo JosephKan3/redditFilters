@@ -408,145 +408,122 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-// Import from JSONL file with confirmation and sanity checks
+// Parse a complete exported JSONL file before changing any saved settings.
+function parseImportData(text) {
+  if (typeof text !== "string") throw new Error("File could not be read as text");
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  if (!lines.length) throw new Error("File is empty");
+
+  const data = {
+    hiddenUsers: [],
+    hiddenKeywords: [],
+    hiddenSubreddits: [],
+    hiddenDomains: [],
+  };
+  const keyMap = {
+    blockedUsers: "hiddenUsers",
+    blockedKeywords: "hiddenKeywords",
+    blockedSubreddits: "hiddenSubreddits",
+    blockedDomains: "hiddenDomains",
+  };
+  const preferenceKeys = [
+    "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains",
+    "blockAds", "nukeConfirm", "requireBlockConfirm",
+  ];
+  const seen = new Set();
+
+  lines.forEach((line, index) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      throw new Error("Invalid JSON on line " + (index + 1));
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
+        typeof parsed.category !== "string") {
+      throw new Error("Missing or invalid category on line " + (index + 1));
+    }
+    const category = parsed.category;
+    if (category !== "preferences" && !Object.hasOwn(keyMap, category)) {
+      throw new Error("Unrecognized category '" + category + "' on line " + (index + 1));
+    }
+    if (seen.has(category)) {
+      throw new Error("Duplicate category '" + category + "' on line " + (index + 1));
+    }
+    seen.add(category);
+
+    if (category === "preferences") {
+      for (const key of preferenceKeys) {
+        if (Object.hasOwn(parsed, key)) {
+          if (typeof parsed[key] !== "boolean") {
+            throw new Error("Invalid preference '" + key + "' on line " + (index + 1));
+          }
+          data[key] = parsed[key];
+        }
+      }
+    } else {
+      if (!Array.isArray(parsed.items) ||
+          !parsed.items.every((item) => typeof item === "string")) {
+        throw new Error("Invalid items in '" + category + "' on line " + (index + 1));
+      }
+      data[keyMap[category]] = parsed.items;
+    }
+  });
+  return data;
+}
+
+// Import from JSONL, persisting before indicating success.
 function importData(file) {
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onerror = () => alert("Import failed: could not read the selected file");
+  reader.onload = function (event) {
+    let data;
     try {
-      const text = e.target.result;
-      const lines = text.split("\n").filter((l) => l.trim());
+      data = parseImportData(event.target.result);
+    } catch (err) {
+      alert("Import failed: " + err.message);
+      return;
+    }
 
-      if (lines.length === 0) {
-        alert("Import failed: file is empty or corrupted");
+    // Categories omitted by Export are intentionally empty. Preferences not
+    // present in the export retain their existing values.
+    let finished = false;
+    const finish = (error) => {
+      if (finished) return;
+      finished = true;
+      if (error) {
+        alert("Import failed to save: " + error);
         return;
       }
 
-      // Validate each line is valid JSON and belongs to this extension
-      const data = {
-        hiddenUsers: [],
-        hiddenKeywords: [],
-        hiddenSubreddits: [],
-        hiddenDomains: [],
-        blockUsers: null,
-        blockKeywords: null,
-        blockSubreddits: null,
-        blockDomains: null,
-        blockAds: null,
-        nukeConfirm: null,
-        requireBlockConfirm: null,
-      };
-
-      const validCategories = new Set([
-        "blockedUsers",
-        "blockedKeywords",
-        "blockedSubreddits",
-        "blockedDomains",
-        "preferences",
-      ]);
-
-      const keyMap = {
-        blockedUsers: "hiddenUsers",
-        blockedKeywords: "hiddenKeywords",
-        blockedSubreddits: "hiddenSubreddits",
-        blockedDomains: "hiddenDomains",
-      };
-
-      let parsedCount = 0;
-      let failed = false;
-      lines.forEach((line) => {
-        if (failed) return;
-        try {
-          const parsed = JSON.parse(line);
-          if (!parsed || typeof parsed.category !== "string") return;
-
-          if (!validCategories.has(parsed.category)) {
-            alert(
-              "Import failed: unrecognized category '" +
-                parsed.category +
-                "' — file may not be from this extension"
-            );
-            failed = true;
-            return;
-          }
-
-          parsedCount++;
-
-          if (parsed.category === "preferences") {
-            if (parsed.blockUsers !== undefined) data.blockUsers = parsed.blockUsers;
-            if (parsed.blockKeywords !== undefined) data.blockKeywords = parsed.blockKeywords;
-            if (parsed.blockSubreddits !== undefined) data.blockSubreddits = parsed.blockSubreddits;
-            if (parsed.blockDomains !== undefined) data.blockDomains = parsed.blockDomains;
-            if (parsed.blockAds !== undefined) data.blockAds = parsed.blockAds;
-            if (parsed.nukeConfirm !== undefined) data.nukeConfirm = parsed.nukeConfirm;
-            if (parsed.requireBlockConfirm !== undefined) data.requireBlockConfirm = parsed.requireBlockConfirm;
-          } else if (parsed.items && Array.isArray(parsed.items)) {
-            const mapped = keyMap[parsed.category];
-            if (mapped && parsed.items.every((item) => typeof item === "string")) {
-              data[mapped] = parsed.items;
-            }
-          }
-        } catch {
-          alert("Import failed: line contains invalid JSON — file may be corrupted");
-          failed = true;
-          return;
-        }
-      });
-
-      if (failed) return;
-
-      if (parsedCount === 0) {
-        alert("Import failed: no valid data found in file");
-        return;
-      }
-
-      // Overwrite current settings
-      document.getElementById("userList").value = data.hiddenUsers.join("\n");
-      document.getElementById("keywordList").value = data.hiddenKeywords.join("\n");
-      document.getElementById("subredditList").value = data.hiddenSubreddits.join("\n");
-      document.getElementById("domainList").value = data.hiddenDomains.join("\n");
-
-      if (data.blockUsers !== null) {
-        document.getElementById("blockUsers").checked = data.blockUsers;
-      }
-      if (data.blockKeywords !== null) {
-        document.getElementById("blockKeywords").checked = data.blockKeywords;
-      }
-      if (data.blockSubreddits !== null) {
-        document.getElementById("blockSubreddits").checked = data.blockSubreddits;
-      }
-      if (data.blockDomains !== null) {
-        document.getElementById("blockDomains").checked = data.blockDomains;
-      }
-      if (data.blockAds !== null) {
-        document.getElementById("blockAds").checked = data.blockAds;
-      }
-      if (data.nukeConfirm !== null) {
-        document.getElementById("nukeConfirm").checked = data.nukeConfirm;
-      }
-      if (data.requireBlockConfirm !== null) {
-        document.getElementById("requireBlockConfirm").checked = data.requireBlockConfirm;
-      }
-
-      // Show success message
+      // Read back the committed settings; do not update the UI before saving.
+      loadData();
       const successEl = document.getElementById("importSuccess");
       if (successEl) {
         successEl.classList.remove("visible");
         void successEl.getBoundingClientRect();
         successEl.style.display = "block";
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            successEl.classList.add("visible");
-          });
+          requestAnimationFrame(() => successEl.classList.add("visible"));
         });
         setTimeout(() => {
           successEl.classList.remove("visible");
-          setTimeout(() => {
-            successEl.style.display = "none";
-          }, 300);
+          setTimeout(() => { successEl.style.display = "none"; }, 300);
         }, 30000);
       }
+    };
+
+    try {
+      const pending = chrome.storage.local.set(data, () => {
+        const error = chrome.runtime.lastError;
+        finish(error ? (error.message || String(error)) : null);
+      });
+      // Firefox can also return a promise from chrome.* APIs.
+      if (pending && typeof pending.then === "function") {
+        pending.then(() => finish(null), (err) => finish(err.message || String(err)));
+      }
     } catch (err) {
-      alert("Failed to parse JSONL file: " + err.message);
+      finish(err.message || String(err));
     }
   };
   reader.readAsText(file);

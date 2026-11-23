@@ -25,6 +25,7 @@ jobs:
           node --check popup.js
           node --check redditFilters.js
           node --check chrome-preview-shim.js
+          node --test tests/import.test.js
           node <<'NODE'
           const fs = require('node:fs');
           const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
