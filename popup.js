@@ -220,7 +220,14 @@ toggleIds.forEach((id) => {
       updateRequireBlockConfirmState();
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         tabs.forEach((tab) => {
-          chrome.tabs.sendMessage(tab.id, { action: "toggleBlockButtons", value: val }).catch(() => {});
+          // Use callback-style messaging for Firefox and Chromium compatibility.
+          // Consume lastError when a Reddit content script is not present.
+          const request = chrome.tabs.sendMessage(
+            tab.id,
+            { action: "toggleBlockButtons", value: val },
+            () => { void chrome.runtime.lastError; }
+          );
+          if (request && typeof request.catch === "function") request.catch(() => {});
         });
       });
     }

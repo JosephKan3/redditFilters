@@ -56,3 +56,35 @@ If you have suggestions for improving Reddit Filters or have found a bug, please
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Firefox (desktop)
+
+This fork supports **Firefox 140+** as well as Chromium browsers. It retains the
+original upstream filtering logic and uses the same `chrome.*` WebExtension API,
+which Firefox supports for callback-style code. The Firefox manifest declares a
+stable add-on ID and no collection/transmission of user data.
+
+### Try the Firefox build
+
+1. Open the **Actions** tab in this fork and choose **Firefox extension package**.
+2. Open the latest successful run, then download the **Firefox-unsigned-extension** artifact.
+3. Extract the downloaded Actions artifact, then extract the extension ZIP inside.
+4. In Firefox, open `about:debugging#/runtime/this-firefox` and choose
+   **Load Temporary Add-on**. Select `manifest.json` in the extracted extension directory.
+5. Open a Reddit tab and use the toolbar popup to configure filters.
+
+Temporary add-ons are removed when Firefox restarts. **Permanent installation
+in regular Firefox requires Mozilla signing** (AMO distribution or signed
+self-distribution). The Actions artifact is an **unsigned development build**, not a
+signed installable XPI. No Mozilla signing credentials are stored in this repo.
+
+### Build and validate locally
+
+From the repository root, use the packaging workflow in
+`.github/workflows/firefox-package.yml` as the reference. It copies only runtime
+files and referenced assets into a staging directory, checks JavaScript syntax,
+runs Mozilla `web-ext lint`, and builds the unsigned Firefox ZIP.
+
+The root `manifest.json` is deliberately dual-browser: Chrome ignores
+`browser_specific_settings`. The Firefox port does not introduce a forked copy
+of the upstream filtering implementation.
