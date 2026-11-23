@@ -1,0 +1,68 @@
+name: Firefox extension package
+
+on:
+  push:
+    branches: [main, feature/firefox-support]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-firefox:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out upstream-based fork
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript and manifest
+        shell: bash
+        run: |
+          node --check popup.js
+          node --check import.js
+          node --check redditFilters.js
+          node --check chrome-preview-shim.js
+          node --test tests/import.test.js
+          node <<'NODE'
+          const fs = require('node:fs');
+          const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          if (m.manifest_version !== 3 || !m.browser_specific_settings?.gecko?.id ||
+              m.browser_specific_settings.gecko.data_collection_permissions?.required?.[0] !== 'none') {
+            throw new Error('Firefox metadata missing or invalid');
+          }
+          const referenced = [
+            m.action.default_popup,
+            ...Object.values(m.action.default_icon),
+            ...Object.values(m.icons),
+            ...m.content_scripts.flatMap(entry => entry.js),
+            ...m.web_accessible_resources.flatMap(entry => entry.resources)
+          ];
+          for (const path of referenced) if (!fs.existsSync(path)) throw new Error('Missing file: ' + path);
+          NODE
+
+      - name: Stage extension (exclude preview and store assets)
+        shell: bash
+        run: |
+          mkdir -p build/firefox/assets/favicon_rocket
+          cp manifest.json popup.html popup.css popup.js import.html import.css import.js redditFilters.js chrome-preview-shim.js LICENSE build/firefox/
+          cp assets/explosion-boom.gif build/firefox/assets/
+          cp assets/favicon_rocket/favicon-16x16.png assets/favicon_rocket/favicon-32x32.png assets/favicon_rocket/android-chrome-512x512.png build/firefox/assets/favicon_rocket/
+
+      - name: Validate and package with Mozilla web-ext
+        shell: bash
+        run: |
+          npm install --global web-ext@10
+          web-ext lint --source-dir build/firefox
+          web-ext build --source-dir build/firefox --artifacts-dir build/packages --overwrite-dest
+
+      - name: Upload unsigned Firefox extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: Firefox-unsigned-extension
+          path: build/packages/*.zip
+          if-no-files-found: error

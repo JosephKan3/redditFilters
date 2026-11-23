@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Import Filters — Advanced Reddit Filters</title>
+  <link rel="stylesheet" href="import.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">ADVANCED REDDIT FILTERS</p>
+    <h1>Import filters</h1>
+    <p>Select a
+       <code>.jsonl</code> export made by Advanced Reddit Filters.</p>
+    <label for="importFileInput">Export file</label>
+    <input id="importFileInput" type="file" accept=".jsonl,.txt,application/jsonl">
+    <section id="preview" hidden aria-live="polite"></section>
+    <div class="actions">
+      <button id="importBtn" type="button" disabled>Import and replace lists</button>
+      <span id="status" role="status" aria-live="polite"></span>
+    </div>
+    <p class="note">Import replaces all four block lists, including lists missing
+       from the export (which represent empty lists). Preferences supplied by
+       the export are applied. Other extension settings stay unchanged.</p>
+    <p class="note">Nothing is uploaded. The file is processed locally, saved to
+       this extension's Firefox storage, then read back for verification.</p>
+  </main>
+  <script src="import.js"></script>
+</body>
+</html>

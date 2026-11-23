@@ -56,3 +56,53 @@ If you have suggestions for improving Reddit Filters or have found a bug, please
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Firefox (desktop)
+
+Advanced Reddit Filters supports **Firefox 140+** alongside Chromium browsers.
+The Firefox implementation retains the existing filtering logic and uses the
+same `chrome.*` WebExtension API, which Firefox supports for callback-style
+code. The Firefox manifest declares no collection/transmission of user data.
+
+### Try the Firefox build
+
+1. Open the repository's **Actions** tab and choose **Firefox extension package**.
+2. Open the latest successful run, then download the **Firefox-unsigned-extension** artifact.
+3. Extract the downloaded Actions artifact, then extract the extension ZIP inside.
+4. In Firefox, open `about:debugging#/runtime/this-firefox` and choose
+   **Load Temporary Add-on**. Select `manifest.json` in the extracted extension directory.
+5. Open a Reddit tab and use the toolbar popup to configure filters.
+6. For **Import**, click the toolbar Import button. A persistent extension tab
+   opens. Choose the exported `.jsonl` file, review the counts, then click
+   **Import and replace lists**. The tab reports storage read-back verification.
+
+Temporary add-ons are removed when Firefox restarts. **Permanent installation
+in regular Firefox requires Mozilla signing** (AMO distribution or signed
+self-distribution). The Actions artifact is an **unsigned development build**, not a
+signed installable XPI. No Mozilla signing credentials are stored in this repo.
+
+**Add-on ID:** The current Firefox manifest uses
+`redditfilters-firefox@xcloudx01.github`, the ID of the development build.
+Before publishing, the maintainer should decide whether to keep that ID or
+adopt a project-owned ID. Changing the ID creates a distinct Firefox extension
+identity and storage namespace; it is not a transparent upgrade.
+
+### Build and validate locally
+
+From the repository root, use the packaging workflow in
+`.github/workflows/firefox-package.yml` as the reference. It copies only runtime
+files and referenced assets into a staging directory, checks JavaScript syntax,
+runs Mozilla `web-ext lint`, and builds the unsigned Firefox ZIP.
+
+The root `manifest.json` is deliberately dual-browser: Chrome ignores
+`browser_specific_settings`. The Firefox port does not introduce a forked copy
+of the upstream filtering implementation.
+
+### Why Import uses its own tab
+
+Firefox closes an extension toolbar popup when a native file-selection dialog
+steals focus (Mozilla Bug 1658694). The import operation cannot safely run in
+that disposable popup: the input change handler may never run. Import now opens
+`import.html` in a persistent extension tab; its file reader and storage
+verification remain alive after the file picker closes. This is deliberately
+separate from the popup's normal editing and exporting behavior.

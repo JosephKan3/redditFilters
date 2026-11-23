@@ -220,7 +220,14 @@ toggleIds.forEach((id) => {
       updateRequireBlockConfirmState();
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         tabs.forEach((tab) => {
-          chrome.tabs.sendMessage(tab.id, { action: "toggleBlockButtons", value: val }).catch(() => {});
+          // Use callback-style messaging for Firefox and Chromium compatibility.
+          // Consume lastError when a Reddit content script is not present.
+          const request = chrome.tabs.sendMessage(
+            tab.id,
+            { action: "toggleBlockButtons", value: val },
+            () => { void chrome.runtime.lastError; }
+          );
+          if (request && typeof request.catch === "function") request.catch(() => {});
         });
       });
     }
@@ -401,167 +408,17 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-// Import from JSONL file with confirmation and sanity checks
-function importData(file) {
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    try {
-      const text = e.target.result;
-      const lines = text.split("\n").filter((l) => l.trim());
-
-      if (lines.length === 0) {
-        alert("Import failed: file is empty or corrupted");
-        return;
-      }
-
-      // Validate each line is valid JSON and belongs to this extension
-      const data = {
-        hiddenUsers: [],
-        hiddenKeywords: [],
-        hiddenSubreddits: [],
-        hiddenDomains: [],
-        blockUsers: null,
-        blockKeywords: null,
-        blockSubreddits: null,
-        blockDomains: null,
-        blockAds: null,
-        nukeConfirm: null,
-        requireBlockConfirm: null,
-      };
-
-      const validCategories = new Set([
-        "blockedUsers",
-        "blockedKeywords",
-        "blockedSubreddits",
-        "blockedDomains",
-        "preferences",
-      ]);
-
-      const keyMap = {
-        blockedUsers: "hiddenUsers",
-        blockedKeywords: "hiddenKeywords",
-        blockedSubreddits: "hiddenSubreddits",
-        blockedDomains: "hiddenDomains",
-      };
-
-      let parsedCount = 0;
-      let failed = false;
-      lines.forEach((line) => {
-        if (failed) return;
-        try {
-          const parsed = JSON.parse(line);
-          if (!parsed || typeof parsed.category !== "string") return;
-
-          if (!validCategories.has(parsed.category)) {
-            alert(
-              "Import failed: unrecognized category '" +
-                parsed.category +
-                "' — file may not be from this extension"
-            );
-            failed = true;
-            return;
-          }
-
-          parsedCount++;
-
-          if (parsed.category === "preferences") {
-            if (parsed.blockUsers !== undefined) data.blockUsers = parsed.blockUsers;
-            if (parsed.blockKeywords !== undefined) data.blockKeywords = parsed.blockKeywords;
-            if (parsed.blockSubreddits !== undefined) data.blockSubreddits = parsed.blockSubreddits;
-            if (parsed.blockDomains !== undefined) data.blockDomains = parsed.blockDomains;
-            if (parsed.blockAds !== undefined) data.blockAds = parsed.blockAds;
-            if (parsed.nukeConfirm !== undefined) data.nukeConfirm = parsed.nukeConfirm;
-            if (parsed.requireBlockConfirm !== undefined) data.requireBlockConfirm = parsed.requireBlockConfirm;
-          } else if (parsed.items && Array.isArray(parsed.items)) {
-            const mapped = keyMap[parsed.category];
-            if (mapped && parsed.items.every((item) => typeof item === "string")) {
-              data[mapped] = parsed.items;
-            }
-          }
-        } catch {
-          alert("Import failed: line contains invalid JSON — file may be corrupted");
-          failed = true;
-          return;
-        }
-      });
-
-      if (failed) return;
-
-      if (parsedCount === 0) {
-        alert("Import failed: no valid data found in file");
-        return;
-      }
-
-      // Overwrite current settings
-      document.getElementById("userList").value = data.hiddenUsers.join("\n");
-      document.getElementById("keywordList").value = data.hiddenKeywords.join("\n");
-      document.getElementById("subredditList").value = data.hiddenSubreddits.join("\n");
-      document.getElementById("domainList").value = data.hiddenDomains.join("\n");
-
-      if (data.blockUsers !== null) {
-        document.getElementById("blockUsers").checked = data.blockUsers;
-      }
-      if (data.blockKeywords !== null) {
-        document.getElementById("blockKeywords").checked = data.blockKeywords;
-      }
-      if (data.blockSubreddits !== null) {
-        document.getElementById("blockSubreddits").checked = data.blockSubreddits;
-      }
-      if (data.blockDomains !== null) {
-        document.getElementById("blockDomains").checked = data.blockDomains;
-      }
-      if (data.blockAds !== null) {
-        document.getElementById("blockAds").checked = data.blockAds;
-      }
-      if (data.nukeConfirm !== null) {
-        document.getElementById("nukeConfirm").checked = data.nukeConfirm;
-      }
-      if (data.requireBlockConfirm !== null) {
-        document.getElementById("requireBlockConfirm").checked = data.requireBlockConfirm;
-      }
-
-      // Show success message
-      const successEl = document.getElementById("importSuccess");
-      if (successEl) {
-        successEl.classList.remove("visible");
-        void successEl.getBoundingClientRect();
-        successEl.style.display = "block";
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            successEl.classList.add("visible");
-          });
-        });
-        setTimeout(() => {
-          successEl.classList.remove("visible");
-          setTimeout(() => {
-            successEl.style.display = "none";
-          }, 300);
-        }, 30000);
-      }
-    } catch (err) {
-      alert("Failed to parse JSONL file: " + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-// Warn before opening file picker
+// Firefox destroys toolbar popups when its native file picker opens.
+// Perform all file selection and import work in a persistent extension tab.
 function triggerImport() {
-  if (!confirm("Importing will replace your current block lists. Do you wish to continue?")) {
-    return;
-  }
-  document.getElementById("importFileInput").click();
+  chrome.tabs.create({ url: chrome.runtime.getURL("import.html") }, () => {
+    const error = chrome.runtime.lastError;
+    if (error) alert("Could not open import tab: " + error.message);
+  });
 }
 
-// Set up import/export button listeners
 document.getElementById("exportBtn").addEventListener("click", exportData);
 document.getElementById("importBtn").addEventListener("click", triggerImport);
-document.getElementById("importFileInput").addEventListener("change", function (e) {
-  if (e.target.files.length > 0) {
-    importData(e.target.files[0]);
-    e.target.value = ""; // Reset so same file can be re-imported
-  }
-});
 
 // Stats
 const mainSections = document.querySelectorAll(".draggableSection, .end, .importExportSection, .drop-zone");
