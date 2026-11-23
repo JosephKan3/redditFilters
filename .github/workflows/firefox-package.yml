@@ -2,7 +2,8 @@ name: Firefox extension package
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/firefox-support]
+  pull_request:
   workflow_dispatch:
 
 jobs:

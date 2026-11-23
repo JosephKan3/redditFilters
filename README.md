@@ -59,14 +59,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Firefox (desktop)
 
-This fork supports **Firefox 140+** as well as Chromium browsers. It retains the
-original upstream filtering logic and uses the same `chrome.*` WebExtension API,
-which Firefox supports for callback-style code. The Firefox manifest declares a
-stable add-on ID and no collection/transmission of user data.
+Advanced Reddit Filters supports **Firefox 140+** alongside Chromium browsers.
+The Firefox implementation retains the existing filtering logic and uses the
+same `chrome.*` WebExtension API, which Firefox supports for callback-style
+code. The Firefox manifest declares no collection/transmission of user data.
 
 ### Try the Firefox build
 
-1. Open the **Actions** tab in this fork and choose **Firefox extension package**.
+1. Open the repository's **Actions** tab and choose **Firefox extension package**.
 2. Open the latest successful run, then download the **Firefox-unsigned-extension** artifact.
 3. Extract the downloaded Actions artifact, then extract the extension ZIP inside.
 4. In Firefox, open `about:debugging#/runtime/this-firefox` and choose
@@ -80,6 +80,12 @@ Temporary add-ons are removed when Firefox restarts. **Permanent installation
 in regular Firefox requires Mozilla signing** (AMO distribution or signed
 self-distribution). The Actions artifact is an **unsigned development build**, not a
 signed installable XPI. No Mozilla signing credentials are stored in this repo.
+
+**Add-on ID:** The current Firefox manifest uses
+`redditfilters-firefox@xcloudx01.github`, the ID of the development build.
+Before publishing, the maintainer should decide whether to keep that ID or
+adopt a project-owned ID. Changing the ID creates a distinct Firefox extension
+identity and storage namespace; it is not a transparent upgrade.
 
 ### Build and validate locally
 
