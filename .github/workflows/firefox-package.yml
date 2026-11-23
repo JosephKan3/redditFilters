@@ -23,6 +23,7 @@ jobs:
         shell: bash
         run: |
           node --check popup.js
+          node --check import.js
           node --check redditFilters.js
           node --check chrome-preview-shim.js
           node --test tests/import.test.js
@@ -47,7 +48,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p build/firefox/assets/favicon_rocket
-          cp manifest.json popup.html popup.css popup.js redditFilters.js chrome-preview-shim.js LICENSE build/firefox/
+          cp manifest.json popup.html popup.css popup.js import.html import.css import.js redditFilters.js chrome-preview-shim.js LICENSE build/firefox/
           cp assets/explosion-boom.gif build/firefox/assets/
           cp assets/favicon_rocket/favicon-16x16.png assets/favicon_rocket/favicon-32x32.png assets/favicon_rocket/android-chrome-512x512.png build/firefox/assets/favicon_rocket/
 

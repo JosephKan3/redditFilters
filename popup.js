@@ -408,144 +408,17 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-// Parse a complete exported JSONL file before changing any saved settings.
-function parseImportData(text) {
-  if (typeof text !== "string") throw new Error("File could not be read as text");
-  const lines = text.split(/\r?\n/).filter((line) => line.trim());
-  if (!lines.length) throw new Error("File is empty");
-
-  const data = {
-    hiddenUsers: [],
-    hiddenKeywords: [],
-    hiddenSubreddits: [],
-    hiddenDomains: [],
-  };
-  const keyMap = {
-    blockedUsers: "hiddenUsers",
-    blockedKeywords: "hiddenKeywords",
-    blockedSubreddits: "hiddenSubreddits",
-    blockedDomains: "hiddenDomains",
-  };
-  const preferenceKeys = [
-    "blockUsers", "blockKeywords", "blockSubreddits", "blockDomains",
-    "blockAds", "nukeConfirm", "requireBlockConfirm",
-  ];
-  const seen = new Set();
-
-  lines.forEach((line, index) => {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      throw new Error("Invalid JSON on line " + (index + 1));
-    }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
-        typeof parsed.category !== "string") {
-      throw new Error("Missing or invalid category on line " + (index + 1));
-    }
-    const category = parsed.category;
-    if (category !== "preferences" && !Object.hasOwn(keyMap, category)) {
-      throw new Error("Unrecognized category '" + category + "' on line " + (index + 1));
-    }
-    if (seen.has(category)) {
-      throw new Error("Duplicate category '" + category + "' on line " + (index + 1));
-    }
-    seen.add(category);
-
-    if (category === "preferences") {
-      for (const key of preferenceKeys) {
-        if (Object.hasOwn(parsed, key)) {
-          if (typeof parsed[key] !== "boolean") {
-            throw new Error("Invalid preference '" + key + "' on line " + (index + 1));
-          }
-          data[key] = parsed[key];
-        }
-      }
-    } else {
-      if (!Array.isArray(parsed.items) ||
-          !parsed.items.every((item) => typeof item === "string")) {
-        throw new Error("Invalid items in '" + category + "' on line " + (index + 1));
-      }
-      data[keyMap[category]] = parsed.items;
-    }
-  });
-  return data;
-}
-
-// Import from JSONL, persisting before indicating success.
-function importData(file) {
-  const reader = new FileReader();
-  reader.onerror = () => alert("Import failed: could not read the selected file");
-  reader.onload = function (event) {
-    let data;
-    try {
-      data = parseImportData(event.target.result);
-    } catch (err) {
-      alert("Import failed: " + err.message);
-      return;
-    }
-
-    // Categories omitted by Export are intentionally empty. Preferences not
-    // present in the export retain their existing values.
-    let finished = false;
-    const finish = (error) => {
-      if (finished) return;
-      finished = true;
-      if (error) {
-        alert("Import failed to save: " + error);
-        return;
-      }
-
-      // Read back the committed settings; do not update the UI before saving.
-      loadData();
-      const successEl = document.getElementById("importSuccess");
-      if (successEl) {
-        successEl.classList.remove("visible");
-        void successEl.getBoundingClientRect();
-        successEl.style.display = "block";
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => successEl.classList.add("visible"));
-        });
-        setTimeout(() => {
-          successEl.classList.remove("visible");
-          setTimeout(() => { successEl.style.display = "none"; }, 300);
-        }, 30000);
-      }
-    };
-
-    try {
-      const pending = chrome.storage.local.set(data, () => {
-        const error = chrome.runtime.lastError;
-        finish(error ? (error.message || String(error)) : null);
-      });
-      // Firefox can also return a promise from chrome.* APIs.
-      if (pending && typeof pending.then === "function") {
-        pending.then(() => finish(null), (err) => finish(err.message || String(err)));
-      }
-    } catch (err) {
-      finish(err.message || String(err));
-    }
-  };
-  reader.readAsText(file);
-}
-
-// Warn before opening file picker
+// Firefox destroys toolbar popups when its native file picker opens.
+// Perform all file selection and import work in a persistent extension tab.
 function triggerImport() {
-  if (!confirm("Importing will replace your current block lists. Do you wish to continue?")) {
-    return;
-  }
-  document.getElementById("importFileInput").click();
+  chrome.tabs.create({ url: chrome.runtime.getURL("import.html") }, () => {
+    const error = chrome.runtime.lastError;
+    if (error) alert("Could not open import tab: " + error.message);
+  });
 }
 
-// Set up import/export button listeners
 document.getElementById("exportBtn").addEventListener("click", exportData);
 document.getElementById("importBtn").addEventListener("click", triggerImport);
-document.getElementById("importFileInput").addEventListener("change", function (e) {
-  if (e.target.files.length > 0) {
-    importData(e.target.files[0]);
-    e.target.value = ""; // Reset so same file can be re-imported
-  }
-});
 
 // Stats
 const mainSections = document.querySelectorAll(".draggableSection, .end, .importExportSection, .drop-zone");

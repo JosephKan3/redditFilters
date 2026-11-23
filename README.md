@@ -72,6 +72,9 @@ stable add-on ID and no collection/transmission of user data.
 4. In Firefox, open `about:debugging#/runtime/this-firefox` and choose
    **Load Temporary Add-on**. Select `manifest.json` in the extracted extension directory.
 5. Open a Reddit tab and use the toolbar popup to configure filters.
+6. For **Import**, click the toolbar Import button. A persistent extension tab
+   opens. Choose the exported `.jsonl` file, review the counts, then click
+   **Import and replace lists**. The tab reports storage read-back verification.
 
 Temporary add-ons are removed when Firefox restarts. **Permanent installation
 in regular Firefox requires Mozilla signing** (AMO distribution or signed
@@ -88,3 +91,12 @@ runs Mozilla `web-ext lint`, and builds the unsigned Firefox ZIP.
 The root `manifest.json` is deliberately dual-browser: Chrome ignores
 `browser_specific_settings`. The Firefox port does not introduce a forked copy
 of the upstream filtering implementation.
+
+### Why Import uses its own tab
+
+Firefox closes an extension toolbar popup when a native file-selection dialog
+steals focus (Mozilla Bug 1658694). The import operation cannot safely run in
+that disposable popup: the input change handler may never run. Import now opens
+`import.html` in a persistent extension tab; its file reader and storage
+verification remain alive after the file picker closes. This is deliberately
+separate from the popup's normal editing and exporting behavior.

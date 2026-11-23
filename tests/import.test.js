@@ -1,94 +1,118 @@
-// Regression coverage for the popup's actual import flow and persisted state.
+// Import regression tests exercise the durable extension page (not a toolbar popup).
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
 
-function setup(options = {}) {
-  const store = { hiddenUsers: ["old_user"], hiddenKeywords: ["old_keyword"] };
-  const alerts = [];
-  const writes = [];
-  const elements = new Map();
-  function element(id) {
+function harness(opts = {}) {
+  const store = { hiddenUsers: ["old_user"], hiddenKeywords: ["old_keyword"], loggingEnabled: true };
+  const writes = [], elements = new Map(), listeners = new Map(), tabs = [];
+  function node(id) {
     if (!elements.has(id)) {
-      const classes = new Set();
       elements.set(id, {
-        id, value: "", checked: false, disabled: false, style: {},
-        addEventListener() {},
-        getBoundingClientRect() { return {}; },
-        classList: {
-          add(key) { classes.add(key); },
-          remove(key) { classes.delete(key); },
-          toggle(key, flag) { if (flag) classes.add(key); else classes.delete(key); },
-          contains(key) { return classes.has(key); }
-        }
+        id, files: [], value: "", textContent: "", dataset: {}, hidden: false,
+        disabled: id === "importBtn",
+        addEventListener(event, callback) { listeners.set(id + ":" + event, callback); }
       });
     }
     return elements.get(id);
   }
-
   const chrome = {
-    runtime: { lastError: undefined },
+    runtime: {
+      getURL(path) { return "moz-extension://test-addon/" + path; },
+      lastError: undefined
+    },
+    tabs: {
+      create(info, callback) { tabs.push(info); if (callback) callback(); }
+    },
     storage: { local: {
-      get(keys, callback) {
-        const result = {};
-        for (const key of keys) if (Object.prototype.hasOwnProperty.call(store, key)) result[key] = store[key];
-        callback(result);
-      },
-      set(data, callback) {
+      set(data, cb) {
         writes.push(data);
-        if (options.failWrite) {
-          chrome.runtime.lastError = { message: "simulated storage error" };
-          callback();
+        if (opts.failWrite) {
+          chrome.runtime.lastError = { message: "simulated write failure" };
+          cb();
           chrome.runtime.lastError = undefined;
           return;
         }
         Object.assign(store, data);
-        callback();
+        cb();
+      },
+      get(keys, cb) {
+        if (opts.failRead) {
+          chrome.runtime.lastError = { message: "simulated read failure" };
+          cb();
+          chrome.runtime.lastError = undefined;
+          return;
+        }
+        const result = {};
+        for (const key of keys) {
+          if (Object.hasOwn(store, key)) result[key] = store[key];
+        }
+        if (opts.corruptRead && Object.hasOwn(result, "hiddenUsers"))
+          result.hiddenUsers = ["other_user"];
+        cb(result);
       }
     }}
   };
+  const doc = {
+    getElementById: node,
+    querySelector() { return node("query"); },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    body: { insertBefore() {} },
+  };
   const ctx = {
-    chrome,
-    document: {
-      getElementById: element,
-      querySelector() { return element("query"); },
-      querySelectorAll() { return []; },
-      addEventListener() {},
-      body: { insertBefore() {} },
-    },
+    chrome, document: doc, console,
+    confirm() { return opts.confirm !== false; },
     FileReader: class {
       readAsText(file) {
-        if (file.readError) this.onerror();
+        if (file.failRead) this.onerror();
         else this.onload({ target: { result: file.text } });
       }
     },
-    alert(message) { alerts.push(message); },
-    requestAnimationFrame(callback) { callback(); },
-    setTimeout() {},
-    console
+    alert() { throw new Error("Unexpected alert"); }
   };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "../popup.js"), "utf8"), ctx, {
-    filename: "popup.js"
-  });
-  return { ctx, store, alerts, writes, element };
+  const load = (file) => vm.runInContext(
+    fs.readFileSync(path.join(__dirname, "..", file), "utf8"),
+    ctx, { filename: file });
+  load("import.js");
+  const choose = (text, failRead = false) => {
+    node("importFileInput").files = [{ text, failRead }];
+    listeners.get("importFileInput:change")();
+  };
+  const click = async () => {
+    await listeners.get("importBtn:click")();
+  };
+  return { store, writes, elements, tabs, node, choose, click, ctx, load, listeners };
 }
 
-test("exported JSONL persists all lists and preferences before showing success", () => {
-  const h = setup();
+test("file picker runs in persistent import page; selection cannot cause storage writes", async () => {
+  const h = harness();
+  h.choose('{"category":"blockedUsers","items":["new_user"]}');
+  assert.equal(h.writes.length, 0);
+  assert.equal(h.node("importBtn").disabled, false);
+  assert.match(h.node("preview").textContent, /Users: 1/);
+  await h.click();
+  assert.equal(h.writes.length, 1);
+  assert.deepEqual(Array.from(h.store.hiddenUsers), ["new_user"]);
+  assert.match(h.node("status").textContent, /Imported and verified/);
+});
+
+test("full exported JSONL persists all categories and preferences; verifies read-back", async () => {
+  const h = harness();
   const lines = [
     { category: "preferences", blockUsers: false, blockKeywords: true,
       blockSubreddits: true, blockDomains: false, blockAds: false,
       nukeConfirm: true, requireBlockConfirm: false },
-    { category: "blockedUsers", items: ["new_user"] },
+    { category: "blockedDomains", items: ["example.com"] },
     { category: "blockedKeywords", items: ["AI", "ChatGPT"] },
     { category: "blockedSubreddits", items: ["test"] },
-    { category: "blockedDomains", items: ["example.com"] }
+    { category: "blockedUsers", items: ["new_user"] }
   ];
-  h.ctx.importData({ text: lines.map(JSON.stringify).join("\r\n") + "\r\n" });
-  assert.equal(h.writes.length, 1);
+  h.choose(lines.map(JSON.stringify).join("\r\n") + "\r\n");
+  await h.click();
   assert.deepEqual(Array.from(h.store.hiddenUsers), ["new_user"]);
   assert.deepEqual(Array.from(h.store.hiddenKeywords), ["AI", "ChatGPT"]);
   assert.deepEqual(Array.from(h.store.hiddenSubreddits), ["test"]);
@@ -96,23 +120,21 @@ test("exported JSONL persists all lists and preferences before showing success",
   assert.equal(h.store.blockUsers, false);
   assert.equal(h.store.blockAds, false);
   assert.equal(h.store.requireBlockConfirm, false);
-  assert.equal(h.element("userList").value, "new_user");
-  assert.equal(h.element("keywordList").value, "AI\nChatGPT");
-  assert.equal(h.element("importSuccess").style.display, "block");
-  assert.equal(h.alerts.length, 0);
+  assert.equal(h.store.loggingEnabled, true);
+  assert.match(h.node("status").textContent, /Imported and verified/);
 });
 
-test("preferences-only export clears lists while leaving omitted settings unchanged", () => {
-  const h = setup();
-  h.store.loggingEnabled = true;
-  h.ctx.importData({ text: JSON.stringify({ category: "preferences", blockUsers: true }) });
+test("preferences-only export clears block lists while retaining omitted settings", async () => {
+  const h = harness();
+  h.choose('{"category":"preferences","blockUsers":true}');
+  await h.click();
   assert.deepEqual(Array.from(h.store.hiddenUsers), []);
   assert.deepEqual(Array.from(h.store.hiddenKeywords), []);
   assert.equal(h.store.loggingEnabled, true);
   assert.equal(h.store.blockUsers, true);
 });
 
-test("invalid category, missing items, malformed JSON and duplicates do not overwrite storage", () => {
+test("malformed JSONL is rejected without writing or enabling Import", async () => {
   for (const input of [
     '{"category":"unknown","items":["a"]}',
     '{"category":"blockedUsers"}',
@@ -122,28 +144,59 @@ test("invalid category, missing items, malformed JSON and duplicates do not over
     '{"category":"blockedUsers","items":["a"]}\n{"category":"blockedUsers","items":["b"]}',
     ""
   ]) {
-    const h = setup();
-    h.ctx.importData({ text: input });
+    const h = harness();
+    h.choose(input);
     assert.equal(h.writes.length, 0, input);
+    assert.equal(h.node("importBtn").disabled, true, input);
+    assert.match(h.node("status").textContent, /Import rejected:/, input);
     assert.deepEqual(h.store.hiddenUsers, ["old_user"], input);
-    assert.equal(h.element("importSuccess").style.display, undefined, input);
-    assert.match(h.alerts[0], /^Import failed:/);
   }
 });
 
-test("storage errors do not display a success state or replace popup values", () => {
-  const h = setup({ failWrite: true });
-  h.element("userList").value = "old_user";
-  h.ctx.importData({ text: '{"category":"blockedUsers","items":["new_user"]}' });
-  assert.deepEqual(h.store.hiddenUsers, ["old_user"]);
-  assert.equal(h.element("userList").value, "old_user");
-  assert.equal(h.element("importSuccess").style.display, undefined);
-  assert.match(h.alerts[0], /Import failed to save: simulated storage error/);
+test("read error and canceled confirmation preserve storage", async () => {
+  const h = harness();
+  h.choose("ignored", true);
+  assert.equal(h.node("importBtn").disabled, true);
+  assert.match(h.node("status").textContent, /Unable to read/);
+  const canceled = harness({ confirm: false });
+  canceled.choose('{"category":"blockedUsers","items":["new"]}');
+  await canceled.click();
+  assert.equal(canceled.writes.length, 0);
+  assert.deepEqual(canceled.store.hiddenUsers, ["old_user"]);
 });
 
-test("file reading error is reported without modifying storage", () => {
-  const h = setup();
-  h.ctx.importData({ readError: true });
-  assert.equal(h.writes.length, 0);
-  assert.match(h.alerts[0], /could not read/);
+test("storage write failures and read-back mismatches do not report success", async () => {
+  for (const opts of [{ failWrite: true }, { failRead: true }, { corruptRead: true }]) {
+    const h = harness(opts);
+    h.choose('{"category":"blockedUsers","items":["new_user"]}');
+    await h.click();
+    assert.equal(h.node("status").dataset.kind, "error");
+    assert.match(h.node("status").textContent, /Import failed:/);
+  }
+});
+
+test("popup Import opens the durable extension tab, never a native file picker", () => {
+  const h = harness();
+  const openerListeners = new Map();
+  const mockNode = (id) => ({
+    checked: false, value: "", dataset: {}, style: {},
+    addEventListener(type, cb) { openerListeners.set(id + ":" + type, cb); },
+    classList: {toggle(){}}
+  });
+  // Popup invokes event handlers on this separate simulated document.
+  const popupNodes = new Map();
+  h.ctx.document = {
+    getElementById(id) {
+      if(!popupNodes.has(id)) popupNodes.set(id,mockNode(id));
+      return popupNodes.get(id);
+    },
+    querySelector() { return mockNode("query"); },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    body:{insertBefore(){}}
+  };
+  h.load("popup.js");
+  openerListeners.get("importBtn:click")();
+  assert.equal(h.tabs.length, 1);
+  assert.equal(h.tabs[0].url, "moz-extension://test-addon/import.html");
 });
